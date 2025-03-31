@@ -13,10 +13,18 @@ const NavbarComponent = () => {
   };
 
   return (
-    <Navbar bg="light" expand="lg" className="shadow-sm">
+    <Navbar bg="dark" expand="lg" className="shadow-sm">
       <Container>
-        {/* Título del Navbar */}
-        <Navbar.Brand as={Link} to="/home">MarketPlace</Navbar.Brand>
+        {/* Logo y título del Navbar */}
+        <Navbar.Brand as={Link} to="/home" className="text-light d-flex align-items-center">
+          <img
+            src="/Logo-market.png" // Asegúrate de que la imagen esté en la carpeta public
+            alt="Logo"
+            height="50"
+            className="d-inline-block align-top me-2"
+          />
+          
+        </Navbar.Brand>
 
         {/* Barra de búsqueda */}
         <Form className="d-flex mx-auto">
@@ -26,26 +34,26 @@ const NavbarComponent = () => {
             className="me-2"
             aria-label="Buscar"
           />
-          <Button variant="outline-success">Buscar</Button>
+          <Button variant="outline-light">Buscar</Button>
         </Form>
 
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
-        <Navbar.Collapse id="basic-navbar-nav">
+        <Navbar.Collapse id="basic-navbar-nav ">
           <Nav className="ms-auto">
             {/* Opciones para usuarios no autenticados */}
             {!user ? (
               <>
-                <Nav.Link as={Link} to="/login">Inicio de Sesión</Nav.Link>
-                <Nav.Link as={Link} to="/register">Registrarse</Nav.Link>
-                <Nav.Link as={Link} to="/cart">Carrito</Nav.Link> {/* Ruta del carrito */}
+                <Nav.Link as={Link} to="/login" className="text-light">Inicio de Sesión</Nav.Link>
+                <Nav.Link as={Link} to="/register" className="text-light">Registrarse</Nav.Link>
+                <Nav.Link as={Link} to="/cart" className="text-light">Carrito</Nav.Link> {/* Ruta del carrito */}
               </>
             ) : (
               <>
                 {/* Opciones para usuarios autenticados */}
-                <Nav.Link as={Link} to="/favorites">Mis Favoritos</Nav.Link>
-                <Nav.Link as={Link} to="/my-posts">Mis Publicaciones</Nav.Link> {/* Ruta pendiente */}
-                <Nav.Link as={Link} to="/profile">Perfil</Nav.Link>
-                <Nav.Link as={Link} to="/create-post">Crear Publicación</Nav.Link>
+                <Nav.Link as={Link} to="/favorites" className="text-light">Mis Favoritos</Nav.Link>
+                <Nav.Link as={Link} to="/my-posts" className="text-light">Mis Publicaciones</Nav.Link> {/* Ruta pendiente */}
+                <Nav.Link as={Link} to="/profile" className="text-light">Perfil</Nav.Link>
+                <Nav.Link as={Link} to="/create-post" className="text-light">Crear Publicación</Nav.Link>
                 <Button variant="outline-danger" onClick={handleLogout} className="ms-2">
                   Cerrar Sesión
                 </Button>
