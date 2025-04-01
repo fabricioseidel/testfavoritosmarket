@@ -94,3 +94,31 @@ exports.getUserPosts = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener las publicaciones del usuario.' });
   }
 };
+
+// Asegurarnos que deletePost está exportado correctamente
+exports.deletePost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Verificar que el post exista y pertenezca al usuario
+    const post = await pool.query(
+      'SELECT * FROM publicaciones WHERE id = $1 AND usuario_id = $2',
+      [id, userId]
+    );
+
+    if (post.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Publicación no encontrada o no tienes permiso para eliminarla' 
+      });
+    }
+
+    // Eliminar el post
+    await pool.query('DELETE FROM publicaciones WHERE id = $1', [id]);
+    
+    res.json({ message: 'Publicación eliminada exitosamente' });
+  } catch (err) {
+    console.error('Error al eliminar la publicación:', err);
+    res.status(500).json({ error: 'Error al eliminar la publicación' });
+  }
+};
