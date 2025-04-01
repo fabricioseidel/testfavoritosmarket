@@ -8,7 +8,18 @@ const PostsGalleryPage = () => {
   const [posts, setPosts] = useState([]);
   const { user } = useContext(UserContext);
 
-  // ...existing fetchPosts useEffect...
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const response = await axios.get('/api/posts');
+        setPosts(response.data);
+      } catch (error) {
+        console.error('Error fetching posts:', error);
+      }
+    };
+
+    fetchPosts();
+  }, []);
 
   const handleViewDetail = (postId) => {
     console.log('Viewing detail for post:', postId);

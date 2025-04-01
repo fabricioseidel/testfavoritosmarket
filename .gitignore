@@ -1,4 +1,5 @@
 # --- Node modules ---
+backend/db.js
 # Sistema operativo
 .DS_Store
 Thumbs.db

@@ -15,4 +15,7 @@ router.get('/', postController.getAllPosts);
 // Obtener el detalle de una publicación por ID (público)
 router.get('/:id', postController.getPostById);
 
+// Eliminar una publicación (protegida)
+router.delete('/:id', authMiddleware, postController.deletePost);
+
 module.exports = router;
