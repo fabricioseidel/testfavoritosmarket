@@ -41,6 +41,49 @@ const MyPostsPage = () => {
     navigate(`/post/${postId}`);
   };
 
+  const handleDeletePost = async (postId) => {
+    console.log('📢 Click en botón eliminar, ID:', postId);
+    
+    try {
+      // Primero verificamos que tenemos el ID y el token
+      if (!postId || !user?.token) {
+        console.error('❌ Falta ID o token:', { postId, token: user?.token });
+        return;
+      }
+
+      // Confirmación del usuario
+      if (!window.confirm('¿Estás seguro de que deseas eliminar esta publicación?')) {
+        console.log('❌ Usuario canceló la eliminación');
+        return;
+      }
+
+      console.log('🚀 Enviando solicitud de eliminación...');
+      const response = await axios({
+        method: 'DELETE',
+        url: `/api/posts/${postId}`,
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+
+      console.log('✅ Respuesta del servidor:', response.data);
+      
+      // Actualizar el estado solo si la eliminación fue exitosa
+      setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+      alert('Publicación eliminada con éxito');
+      
+    } catch (err) {
+      console.error('❌ Error completo:', err);
+      console.error('❌ Detalles del error:', {
+        mensaje: err.message,
+        respuesta: err.response?.data,
+        estado: err.response?.status,
+        headers: err.response?.headers
+      });
+      alert('Error al eliminar la publicación');
+    }
+  };
+
   if (loading) return <Container className="my-5"><p>Cargando publicaciones...</p></Container>;
   if (error) return <Container className="my-5"><Alert variant="danger">{error}</Alert></Container>;
 
@@ -81,7 +124,14 @@ const MyPostsPage = () => {
                   <Button variant="outline-primary" size="sm">
                     Editar
                   </Button>
-                  <Button variant="outline-danger" size="sm">
+                  <Button 
+                    variant="outline-danger" 
+                    size="sm"
+                    onClick={() => {
+                      console.log('🖱️ Click en botón eliminar para post:', post.id);
+                      handleDeletePost(post.id);
+                    }}
+                  >
                     Eliminar
                   </Button>
                   <Button 

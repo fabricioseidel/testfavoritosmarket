@@ -58,16 +58,31 @@ exports.login = async (req, res) => {
 // Obtener el perfil del usuario autenticado
 exports.getProfile = async (req, res) => {
   try {
-    const user = await pool.query('SELECT id, nombre, email, foto_perfil FROM usuarios WHERE id = $1', [req.user.id]);
+    console.log('⭐ Obteniendo perfil para usuario ID:', req.user?.id);
+    
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    // Modificar la consulta para no usar created_at
+    const user = await pool.query(
+      'SELECT id, nombre, email, foto_perfil FROM usuarios WHERE id = $1',
+      [req.user.id]
+    );
+
+    console.log('📊 Resultado de la consulta:', user.rows[0]);
 
     if (user.rows.length === 0) {
-      return res.status(404).json({ error: 'Usuario no encontrado.' });
+      return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
     res.json(user.rows[0]);
   } catch (err) {
-    console.error('Error al obtener el perfil del usuario:', err);
-    res.status(500).json({ error: 'Error al obtener el perfil del usuario.' });
+    console.error('❌ Error en getProfile:', err);
+    res.status(500).json({ 
+      error: 'Error al obtener el perfil',
+      details: err.message 
+    });
   }
 };
 
@@ -119,5 +134,47 @@ exports.getUserById = async (req, res) => {
   } catch (err) {
     console.error('Error al obtener el usuario:', err);
     res.status(500).json({ error: 'Error al obtener el usuario.' });
+  }
+};
+
+exports.getUserStats = async (req, res) => {
+  try {
+    const postsCount = await pool.query(
+      'SELECT COUNT(*) FROM publicaciones WHERE usuario_id = $1',
+      [req.user.id]
+    );
+
+    const favoritesCount = await pool.query(
+      'SELECT COUNT(*) FROM favoritos WHERE usuario_id = $1',
+      [req.user.id]
+    );
+
+    res.json({
+      totalPosts: parseInt(postsCount.rows[0].count),
+      totalFavoritos: parseInt(favoritesCount.rows[0].count)
+    });
+  } catch (err) {
+    console.error('Error al obtener estadísticas:', err);
+    res.status(500).json({ error: 'Error al obtener estadísticas' });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const { nombre, foto_perfil } = req.body;
+    
+    const updatedUser = await pool.query(
+      'UPDATE usuarios SET nombre = $1, foto_perfil = $2 WHERE id = $3 RETURNING nombre, email, foto_perfil',
+      [nombre, foto_perfil, req.user.id]
+    );
+
+    if (updatedUser.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json(updatedUser.rows[0]);
+  } catch (err) {
+    console.error('Error al actualizar perfil:', err);
+    res.status(500).json({ error: 'Error al actualizar perfil' });
   }
 };
