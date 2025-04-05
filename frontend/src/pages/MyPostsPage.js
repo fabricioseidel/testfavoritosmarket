@@ -20,7 +20,7 @@ const MyPostsPage = () => {
           return;
         }
 
-        const response = await axios.get('/api/posts/user-posts', {
+        const response = await axios.get('/api/posts/user/posts', { // Corregir la ruta
           headers: { Authorization: `Bearer ${user.token}` }
         });
 

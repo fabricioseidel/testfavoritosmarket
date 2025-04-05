@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { pool } = require('../db');
+const pool = require('../db'); // Actualizada la importación
 
 exports.register = async (req, res) => {
   try {

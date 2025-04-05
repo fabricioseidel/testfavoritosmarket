@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const app = express();
-const pool = require('./db'); // Importar el archivo db.js
+const pool = require('./db'); // Actualizar la importación
 const favoritesRoutes = require('./routes/favoritesRoutes');
 
 const authRoutes = require('./routes/authRoutes'); // Importar las rutas de autenticación
@@ -25,28 +25,32 @@ app.use(cors());
 app.use(express.json());
 
 // Prueba de conexión a la base de datos
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
+const testDbConnection = async () => {
+  try {
+    const result = await pool.query('SELECT NOW()');
+    console.log('Conexión exitosa a la base de datos:', result.rows[0]);
+  } catch (err) {
     console.error('Error al conectar a la base de datos:', err);
-  } else {
-    console.log('Conexión exitosa a la base de datos:', res.rows[0]);
+    process.exit(1);
   }
-});
+};
 
-// Rutas de la API
+testDbConnection();
+
+// Rutas de la API (mover antes de la ruta estática)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/favorites', favoritesRoutes);
 
-// Middleware para servir archivos estáticos del frontend
-app.use(express.static(path.join(__dirname, '../frontend/build')));
-
-// Ruta para manejar cualquier otra solicitud (React Router)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
-});
+// Solo usar en producción
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/build')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+  });
+}
 
 // Mejora en manejo de errores global
 app.use((err, req, res, next) => {
