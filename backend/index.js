@@ -12,11 +12,13 @@ const userRoutes = require('./routes/userRoutes'); // Importar las rutas de usua
 const postRoutes = require('./routes/postRoutes'); // Importar las rutas de publicaciones
 const profileRoutes = require('./routes/profileRoutes'); // Importar las rutas de perfil
 
-// Verificar si JWT_SECRET está configurado
-if (!process.env.JWT_SECRET) {
-  console.error('Error: JWT_SECRET no está configurado en el archivo .env');
-  process.exit(1); // Detener el servidor si falta JWT_SECRET
-}
+// Mejora en verificación de variables esenciales
+['JWT_SECRET', 'DB_PASSWORD'].forEach(key => {
+  if (!process.env[key]) {
+    console.error(`Error: ${key} no está configurado`);
+    process.exit(1);
+  }
+});
 
 // Middlewares
 app.use(cors());
@@ -44,6 +46,15 @@ app.use(express.static(path.join(__dirname, '../frontend/build')));
 // Ruta para manejar cualquier otra solicitud (React Router)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+});
+
+// Mejora en manejo de errores global
+app.use((err, req, res, next) => {
+  console.error('Error:', err.message);
+  res.status(500).json({ 
+    error: 'Error del servidor',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 // Iniciar el servidor
