@@ -4,6 +4,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { UserContext } from '../context/UserContext';
 
+const formatDate = (dateString) => {
+  if (!dateString) return 'Fecha no disponible';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Fecha no válida';
+  return date.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
 const MyPostsPage = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +126,7 @@ const MyPostsPage = () => {
             <tr key={post.id}>
               <td>{post.titulo}</td>
               <td>${post.precio}</td>
-              <td>{new Date(post.fecha).toLocaleDateString()}</td>
+              <td>{formatDate(post.fecha_creacion)}</td>
               <td>
                 <Badge bg={post.estado === 'activo' ? 'success' : 'secondary'}>
                   {post.estado}

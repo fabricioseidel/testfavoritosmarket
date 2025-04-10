@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const app = express();
-const pool = require('./db'); // Actualizar la importación
+const pool = require('./db'); // Asegurarse que esta línea apunte al archivo correcto
 const favoritesRoutes = require('./routes/favoritesRoutes');
 
 const authRoutes = require('./routes/authRoutes'); // Importar las rutas de autenticación
@@ -22,7 +22,15 @@ const profileRoutes = require('./routes/profileRoutes'); // Importar las rutas d
 
 // Middlewares
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ charset: 'utf-8' }));
+app.use(express.urlencoded({ extended: true, charset: 'utf-8' }));
+
+// Middleware para forzar UTF-8 en todas las respuestas
+app.use((req, res, next) => {
+  res.charset = 'utf-8';
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
 
 // Prueba de conexión a la base de datos
 const testDbConnection = async () => {

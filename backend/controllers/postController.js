@@ -29,13 +29,20 @@ exports.createPost = async (req, res) => {
 
 // Obtener todas las publicaciones
 exports.getAllPosts = async (req, res) => {
-  console.log('📤 Intentando obtener publicaciones...');
   try {
     const result = await pool.query('SELECT * FROM publicaciones ORDER BY id DESC');
-    console.log('✅ Publicaciones obtenidas exitosamente:', result.rows.length);
-    res.json(result.rows);
+    
+    // Asegurar que los textos se codifiquen correctamente
+    const posts = result.rows.map(post => ({
+      ...post,
+      titulo: Buffer.from(post.titulo).toString('utf8'),
+      descripcion: Buffer.from(post.descripcion).toString('utf8'),
+      categoria: Buffer.from(post.categoria).toString('utf8')
+    }));
+    
+    res.json(posts);
   } catch (err) {
-    console.error('❌ Error en getAllPosts:', err);
+    console.error('Error en getAllPosts:', err);
     res.status(500).json({ error: 'Error al obtener las publicaciones' });
   }
 };
@@ -116,5 +123,31 @@ exports.deletePost = async (req, res) => {
   } catch (err) {
     console.error('Error al eliminar la publicación:', err);
     res.status(500).json({ error: 'Error al eliminar la publicación' });
+  }
+};
+
+// Agregar esta nueva función al controlador
+exports.searchPosts = async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q) {
+      return res.status(400).json({ error: 'Se requiere un término de búsqueda' });
+    }
+
+    const searchQuery = `%${q}%`;
+    const result = await pool.query(
+      `SELECT * FROM publicaciones 
+       WHERE titulo ILIKE $1 
+       OR descripcion ILIKE $1 
+       OR categoria ILIKE $1 
+       ORDER BY id DESC`,
+      [searchQuery]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error en la búsqueda:', err);
+    res.status(500).json({ error: 'Error al realizar la búsqueda' });
   }
 };
