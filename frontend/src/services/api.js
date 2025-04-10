@@ -15,18 +15,20 @@ const validateImageUrl = (url) => {
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
   headers: {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Accept': 'application/json; charset=utf-8',
-    'Accept-Charset': 'utf-8'
-  },
-  transformResponse: [...axios.defaults.transformResponse, data => {
-    // Asegurarse de que las cadenas se decodifiquen correctamente
-    if (typeof data === 'string') {
-      return JSON.parse(data);
-    }
-    return data;
-  }]
+    'Content-Type': 'application/json'
+  }
 });
+
+api.defaults.headers.common['Accept'] = 'application/json; charset=utf-8';
+api.defaults.headers.common['Accept-Charset'] = 'utf-8';
+
+api.defaults.transformResponse = [...axios.defaults.transformResponse, data => {
+  // Asegurarse de que las cadenas se decodifiquen correctamente
+  if (typeof data === 'string') {
+    return JSON.parse(data);
+  }
+  return data;
+}];
 
 // Interceptor para manejar caracteres especiales en las respuestas
 api.interceptors.response.use(response => {
