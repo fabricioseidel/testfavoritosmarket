@@ -11,6 +11,7 @@ import CreatePostPage from './pages/CreatePostPage';
 import PostDetailPage from './pages/PostDetailPage';
 import FavoritePosts from './pages/FavoritePosts';
 import MyPostsPage from './pages/MyPostsPage'; // Importar la página
+import SearchResultsPage from './pages/SearchResultsPage'; // Importamos la página de resultados de búsqueda
 
 const App = () => {
   return (
@@ -29,6 +30,7 @@ const App = () => {
             <Route path="/post/:id" element={<PostDetailPage />} />
             <Route path="/favorites" element={<FavoritePosts />} />
             <Route path="/my-posts" element={<MyPostsPage />} />
+            <Route path="/search" element={<SearchResultsPage />} /> {/* Agregamos la ruta para los resultados de búsqueda */}
           </Routes>
         </div>
         <Footer /> {/* Agregamos el Footer */}

@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --detectOpenHandles --forceExit --config ./jest.config.js",
+    "test:watch": "jest --watch --config ./jest.config.js",
+    "test:coverage": "jest --coverage --config ./jest.config.js",
+    "test:verbose": "jest --verbose --config ./jest.config.js"
   },
   "keywords": [],
   "author": "Tu Nombre",

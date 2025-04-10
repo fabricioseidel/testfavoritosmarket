@@ -3,19 +3,14 @@ const router = express.Router();
 const postController = require('../controllers/postController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
-// Crear una nueva publicación (protegida)
-router.post('/create-post', authMiddleware, postController.createPost);
+// Agregar la ruta de búsqueda antes de las rutas con parámetros
+router.get('/search', postController.searchPosts);
 
-// Obtener publicaciones del usuario autenticado (protegida)
-router.get('/user-posts', authMiddleware, postController.getUserPosts);
-
-// Obtener todas las publicaciones (público)
-router.get('/', postController.getAllPosts);
-
-// Obtener el detalle de una publicación por ID (público)
+// Reordenar las rutas para evitar conflictos
+router.get('/user/posts', authMiddleware, postController.getUserPosts); // Esta ruta debe ir primero
 router.get('/:id', postController.getPostById);
-
-// Eliminar una publicación (protegida)
+router.get('/', postController.getAllPosts);
+router.post('/', authMiddleware, postController.createPost);
 router.delete('/:id', authMiddleware, postController.deletePost);
 
 module.exports = router;

@@ -9,11 +9,19 @@ const HomePage = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  // Función para validar y formatear publicaciones
+  const validateAndFormatPosts = (posts) => {
+    return posts.map(post => ({
+      ...post,
+      imagen: post.imagen || '/placeholder-image.jpg'
+    }));
+  };
+
   // Función para cargar publicaciones
   const fetchPosts = () => {
     axios.get('/api/posts')
       .then(response => {
-        setPosts(response.data);
+        setPosts(validateAndFormatPosts(response.data));
         setError(null);
       })
       .catch(err => {

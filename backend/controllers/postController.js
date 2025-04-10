@@ -30,19 +30,20 @@ exports.createPost = async (req, res) => {
 // Obtener todas las publicaciones
 exports.getAllPosts = async (req, res) => {
   try {
-    console.log('📤 Intentando obtener publicaciones...');
-
-    const result = await pool.query('SELECT * FROM publicaciones');
-
-    console.log('✅ Publicaciones obtenidas:', result.rows.length, 'registro(s)');
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Error en getAllPosts:', {
-      message: error.message,
-      stack: error.stack
-    });
-
-    res.status(500).json({ error: 'Error interno al obtener publicaciones' });
+    const result = await pool.query('SELECT * FROM publicaciones ORDER BY id DESC');
+    
+    // Asegurar que los textos se codifiquen correctamente
+    const posts = result.rows.map(post => ({
+      ...post,
+      titulo: Buffer.from(post.titulo).toString('utf8'),
+      descripcion: Buffer.from(post.descripcion).toString('utf8'),
+      categoria: Buffer.from(post.categoria).toString('utf8')
+    }));
+    
+    res.json(posts);
+  } catch (err) {
+    console.error('Error en getAllPosts:', err);
+    res.status(500).json({ error: 'Error al obtener las publicaciones' });
   }
 };
 
@@ -79,18 +80,20 @@ exports.getPostById = async (req, res) => {
 // Obtener publicaciones del usuario autenticado
 exports.getUserPosts = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Usuario no autenticado.' });
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Usuario no autenticado o ID no válido.' });
     }
 
+    console.log('🔍 Buscando posts para usuario:', req.user.id);
     const posts = await pool.query(
-      'SELECT id, titulo, descripcion, categoria, precio, imagen FROM publicaciones WHERE usuario_id = $1',
+      'SELECT * FROM publicaciones WHERE usuario_id = $1 ORDER BY id DESC',
       [req.user.id]
     );
 
+    console.log(`✅ ${posts.rows.length} posts encontrados`);
     res.json(posts.rows);
   } catch (err) {
-    console.error('Error al obtener las publicaciones del usuario:', err);
+    console.error('❌ Error en getUserPosts:', err);
     res.status(500).json({ error: 'Error al obtener las publicaciones del usuario.' });
   }
 };
@@ -120,5 +123,31 @@ exports.deletePost = async (req, res) => {
   } catch (err) {
     console.error('Error al eliminar la publicación:', err);
     res.status(500).json({ error: 'Error al eliminar la publicación' });
+  }
+};
+
+// Agregar esta nueva función al controlador
+exports.searchPosts = async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q) {
+      return res.status(400).json({ error: 'Se requiere un término de búsqueda' });
+    }
+
+    const searchQuery = `%${q}%`;
+    const result = await pool.query(
+      `SELECT * FROM publicaciones 
+       WHERE titulo ILIKE $1 
+       OR descripcion ILIKE $1 
+       OR categoria ILIKE $1 
+       ORDER BY id DESC`,
+      [searchQuery]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error en la búsqueda:', err);
+    res.status(500).json({ error: 'Error al realizar la búsqueda' });
   }
 };

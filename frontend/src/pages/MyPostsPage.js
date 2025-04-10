@@ -4,6 +4,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { UserContext } from '../context/UserContext';
 
+const formatDate = (dateString) => {
+  if (!dateString) return 'Fecha no disponible';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Fecha no válida';
+  return date.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
 const MyPostsPage = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +33,7 @@ const MyPostsPage = () => {
           return;
         }
 
-        const response = await axios.get('/api/posts/user-posts', {
+        const response = await axios.get('/api/posts/user/posts', { // Corregir la ruta
           headers: { Authorization: `Bearer ${user.token}` }
         });
 
@@ -39,6 +52,49 @@ const MyPostsPage = () => {
 
   const handleViewPost = (postId) => {
     navigate(`/post/${postId}`);
+  };
+
+  const handleDeletePost = async (postId) => {
+    console.log('📢 Click en botón eliminar, ID:', postId);
+    
+    try {
+      // Primero verificamos que tenemos el ID y el token
+      if (!postId || !user?.token) {
+        console.error('❌ Falta ID o token:', { postId, token: user?.token });
+        return;
+      }
+
+      // Confirmación del usuario
+      if (!window.confirm('¿Estás seguro de que deseas eliminar esta publicación?')) {
+        console.log('❌ Usuario canceló la eliminación');
+        return;
+      }
+
+      console.log('🚀 Enviando solicitud de eliminación...');
+      const response = await axios({
+        method: 'DELETE',
+        url: `/api/posts/${postId}`,
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+
+      console.log('✅ Respuesta del servidor:', response.data);
+      
+      // Actualizar el estado solo si la eliminación fue exitosa
+      setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+      alert('Publicación eliminada con éxito');
+      
+    } catch (err) {
+      console.error('❌ Error completo:', err);
+      console.error('❌ Detalles del error:', {
+        mensaje: err.message,
+        respuesta: err.response?.data,
+        estado: err.response?.status,
+        headers: err.response?.headers
+      });
+      alert('Error al eliminar la publicación');
+    }
   };
 
   if (loading) return <Container className="my-5"><p>Cargando publicaciones...</p></Container>;
@@ -70,7 +126,7 @@ const MyPostsPage = () => {
             <tr key={post.id}>
               <td>{post.titulo}</td>
               <td>${post.precio}</td>
-              <td>{new Date(post.fecha).toLocaleDateString()}</td>
+              <td>{formatDate(post.fecha_creacion)}</td>
               <td>
                 <Badge bg={post.estado === 'activo' ? 'success' : 'secondary'}>
                   {post.estado}
@@ -81,7 +137,14 @@ const MyPostsPage = () => {
                   <Button variant="outline-primary" size="sm">
                     Editar
                   </Button>
-                  <Button variant="outline-danger" size="sm">
+                  <Button 
+                    variant="outline-danger" 
+                    size="sm"
+                    onClick={() => {
+                      console.log('🖱️ Click en botón eliminar para post:', post.id);
+                      handleDeletePost(post.id);
+                    }}
+                  >
                     Eliminar
                   </Button>
                   <Button 

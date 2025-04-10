@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const app = express();
-const pool = require('./db'); // Importar el archivo db.js
+const pool = require('./db'); // Asegurarse que esta línea apunte al archivo correcto
 const favoritesRoutes = require('./routes/favoritesRoutes');
 
 const authRoutes = require('./routes/authRoutes'); // Importar las rutas de autenticación
@@ -12,38 +12,61 @@ const userRoutes = require('./routes/userRoutes'); // Importar las rutas de usua
 const postRoutes = require('./routes/postRoutes'); // Importar las rutas de publicaciones
 const profileRoutes = require('./routes/profileRoutes'); // Importar las rutas de perfil
 
-// Verificar si JWT_SECRET está configurado
-if (!process.env.JWT_SECRET) {
-  console.error('Error: JWT_SECRET no está configurado en el archivo .env');
-  process.exit(1); // Detener el servidor si falta JWT_SECRET
-}
-
-// Middlewares
-app.use(cors());
-app.use(express.json());
-
-// Prueba de conexión a la base de datos
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('Error al conectar a la base de datos:', err);
-  } else {
-    console.log('Conexión exitosa a la base de datos:', res.rows[0]);
+// Mejora en verificación de variables esenciales
+['JWT_SECRET', 'DB_PASSWORD'].forEach(key => {
+  if (!process.env[key]) {
+    console.error(`Error: ${key} no está configurado`);
+    process.exit(1);
   }
 });
 
-// Rutas de la API
+// Middlewares
+app.use(cors());
+app.use(express.json({ charset: 'utf-8' }));
+app.use(express.urlencoded({ extended: true, charset: 'utf-8' }));
+
+// Middleware para forzar UTF-8 en todas las respuestas
+app.use((req, res, next) => {
+  res.charset = 'utf-8';
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
+
+// Prueba de conexión a la base de datos
+const testDbConnection = async () => {
+  try {
+    const result = await pool.query('SELECT NOW()');
+    console.log('Conexión exitosa a la base de datos:', result.rows[0]);
+  } catch (err) {
+    console.error('Error al conectar a la base de datos:', err);
+    process.exit(1);
+  }
+};
+
+testDbConnection();
+
+// Rutas de la API (mover antes de la ruta estática)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/favorites', favoritesRoutes);
 
-// Middleware para servir archivos estáticos del frontend
-app.use(express.static(path.join(__dirname, '../frontend/build')));
+// Solo usar en producción
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/build')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+  });
+}
 
-// Ruta para manejar cualquier otra solicitud (React Router)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+// Mejora en manejo de errores global
+app.use((err, req, res, next) => {
+  console.error('Error:', err.message);
+  res.status(500).json({ 
+    error: 'Error del servidor',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 // Iniciar el servidor
