@@ -1,99 +1,97 @@
-# Configuración del Proyecto
+# Guía de Instalación Paso a Paso
 
-## Requisitos Previos
-- Node.js >= 14
-- PostgreSQL >= 12
-- npm o yarn
-
-## Pasos de Instalación
-
-### 1. Clonar el Repositorio
+## 1. Clonar el Repositorio
 ```bash
-git clone <url-del-repositorio>
+git clone [URL-del-repositorio]
 cd testfavoritosmarket
 ```
 
-### 2. Configurar la Base de Datos
+## 2. Configurar PostgreSQL
+1. Asegúrate de tener PostgreSQL instalado
+2. Abre pgAdmin o terminal PostgreSQL
+3. Inicia sesión con tu usuario postgres
+4. Ejecuta:
 ```bash
-# Iniciar sesión en PostgreSQL
-psql -U postgres
-
-# Ejecutar el script de inicialización
-\i backend/db/init.sql
+psql -U postgres -f backend/db/init.sql
 ```
 
-### 3. Configurar Variables de Entorno
+## 3. Configurar Variables de Entorno
 
-En el directorio backend, crear archivo .env:
-```env
-JWT_SECRET=tu_clave_secreta
+### Backend (.env)
+1. Ve a la carpeta backend
+2. Crea un archivo llamado `.env`
+3. Copia este contenido:
+```properties
+JWT_SECRET=puedes_poner_cualquier_texto_secreto_aqui_123
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=marketplace
 DB_USER=postgres
-DB_PASSWORD=tu_contraseña
+DB_PASSWORD=tu_contraseña_de_postgres
 ```
+⚠️ Reemplaza "tu_contraseña_de_postgres" con tu contraseña real de PostgreSQL
 
-En el directorio frontend, crear archivo .env:
-```env
+### Frontend (.env)
+1. Ve a la carpeta frontend
+2. Crea un archivo llamado `.env`
+3. Copia este contenido:
+```properties
 REACT_APP_API_URL=http://localhost:5000/api
 ```
 
-### 4. Instalar Dependencias
-
-Backend:
+## 4. Instalar Dependencias
 ```bash
+# Instalar dependencias globales
+npm install
+
+# Instalar dependencias del backend
 cd backend
 npm install
-```
 
-Frontend:
-```bash
-cd frontend
+# Instalar dependencias del frontend
+cd ../frontend
 npm install
 ```
 
-### 5. Iniciar la Aplicación
+## 5. Iniciar la Aplicación
 
-Backend:
+### Iniciar Backend
 ```bash
 cd backend
 npm run dev
 ```
 
-Frontend (en otra terminal):
+### Iniciar Frontend (en otra terminal)
 ```bash
 cd frontend
 npm start
 ```
 
 ## Verificación
-- Backend: http://localhost:5000
-- Frontend: http://localhost:3000
+Abre tu navegador y visita:
+- http://localhost:3000
 
-## Estructura de la Base de Datos
+## Solución de Problemas Comunes
 
-### Tabla usuarios
-- id: SERIAL PRIMARY KEY
-- email: VARCHAR(255) UNIQUE
-- password: VARCHAR(255)
-- nombre: VARCHAR(255)
-- foto_perfil: TEXT
-- fecha_registro: TIMESTAMP
+### Error de PostgreSQL
+Si ves errores de conexión a la base de datos:
+1. Verifica que PostgreSQL esté ejecutándose
+2. Confirma que la contraseña en el archivo .env sea correcta
+3. Asegúrate que el puerto 5432 esté disponible
 
-### Tabla publicaciones
-- id: SERIAL PRIMARY KEY
-- titulo: VARCHAR(255)
-- descripcion: TEXT
-- categoria: VARCHAR(100)
-- precio: DECIMAL(10,2)
-- imagen: TEXT
-- usuario_id: INTEGER (FK)
-- fecha_creacion: TIMESTAMP
-- estado: VARCHAR(50)
+### Error de Puertos
+- Si el puerto 3000 está ocupado, el frontend te preguntará si quieres usar otro
+- Si el puerto 5000 está ocupado, cambia en el backend .env: PORT=5001
 
-### Tabla favoritos
-- id: SERIAL PRIMARY KEY
-- usuario_id: INTEGER (FK)
-- publicacion_id: INTEGER (FK)
-- fecha_creacion: TIMESTAMP
+### Error de JWT
+El JWT_SECRET puede ser cualquier texto que elijas, por ejemplo:
+- miClaveSecreta123
+- marketplace_jwt_2024
+- cualquier_texto_secreto
+
+## Ayuda Adicional
+Si encuentras problemas, verifica:
+1. Que todos los archivos .env estén creados correctamente
+2. Que PostgreSQL esté corriendo
+3. Que todas las dependencias estén instaladas
+4. Que los puertos 3000 y 5000 estén libres
