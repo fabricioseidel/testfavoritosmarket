@@ -18,42 +18,34 @@ const CreatePostPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log('Usuario en el contexto:', user);
+    console.log('Datos enviados al backend:', {
+      titulo: title,
+      descripcion: description,
+      categoria: category,
+      precio: Number(price),
+      imagen: image
+    });
 
     if (!user || !user.token) {
       alert('Debes iniciar sesión para crear una publicación');
       return;
     }
 
-    if (!title || !description || !category || !price || !image) {
-      setError('Todos los campos son obligatorios.');
-      return;
-    }
-
-    if (price <= 0) {
-      setError('El precio debe ser un número positivo.');
-      return;
-    }
-
-    const dataToSend = {
-      titulo: title,
-      descripcion: description,
-      categoria: category,
-      precio: parseFloat(price),
-      imagen: image,
-    };
-
-    console.log('Datos enviados al backend:', dataToSend);
-    console.log('Token enviado al backend:', user.token);
-
     try {
       const response = await axios.post(
-        '/api/posts/create-post',
-        dataToSend,
+        '/api/posts',
+        {
+          titulo: title,
+          descripcion: description,
+          categoria: category,
+          precio: Number(price),
+          imagen: image
+        },
         {
           headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
         }
       );
 
@@ -68,17 +60,13 @@ const CreatePostPage = () => {
       setPrice('');
       setImage('');
 
-      // Redirigir al usuario a la página principal o perfil
+      // Redirigir al usuario después de 2 segundos
       setTimeout(() => {
-        navigate('/home');
+        navigate('/my-posts');
       }, 2000);
     } catch (err) {
-      console.error('Error creando la publicación:', err);
-      if (err.response && err.response.data && err.response.data.error) {
-        setError(err.response.data.error);
-      } else {
-        setError('Ocurrió un error al crear la publicación. Por favor, inténtalo de nuevo.');
-      }
+      console.error('Error detallado:', err.response || err);
+      setError(err.response?.data?.error || 'Error al crear la publicación.');
       setSuccess(false);
     }
   };
