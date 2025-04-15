@@ -6,4 +6,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
 // Ruta protegida para obtener el perfil del usuario
 router.get('/', authMiddleware, userController.getProfile);
 
+// Ruta protegida para actualizar el perfil
+router.put('/', authMiddleware, userController.updateProfile);
+
 module.exports = router;

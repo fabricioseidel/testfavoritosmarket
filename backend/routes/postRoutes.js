@@ -12,6 +12,12 @@ router.get('/user-posts', authMiddleware, postController.getUserPosts);
 // Obtener todas las publicaciones (público)
 router.get('/', postController.getAllPosts);
 
+// Rutas para búsqueda y actualización
+router.get('/search', postController.searchPosts);
+router.put('/update/:id', authMiddleware, postController.updatePost);
+// También podemos habilitar la ruta con formato tradicional
+router.put('/:id', authMiddleware, postController.updatePost);
+
 // Obtener el detalle de una publicación por ID (público)
 router.get('/:id', postController.getPostById);
 

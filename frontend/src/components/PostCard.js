@@ -11,15 +11,54 @@ const Card = styled.div`
   margin: 16px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease-in-out;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
 `;
 
-const PostCard = ({ id, title, description, price, image, onClick, initialFavorite = false, onToggleFavorite }) => {
+const ImageContainer = styled.div`
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  border-radius: 6px;
+  margin-bottom: 12px;
+`;
+
+const ProductImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+`;
+
+const PostCard = ({ id, title, description, price, image, onClick, initialFavorite = false, onToggleFavorite, viewMode = 'grid' }) => {
   const { user } = useContext(UserContext);
   const [isFavorite, setIsFavorite] = useState(initialFavorite);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
 
   useEffect(() => {
     setIsFavorite(initialFavorite);
-  }, [initialFavorite]);
+    
+    // Si el usuario está autenticado, verificar si el post está en favoritos
+    if (user?.token && id) {
+      axios.get(`/api/favorites/check/${id}`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      })
+      .then(response => {
+        setIsFavorite(response.data.isFavorite);
+      })
+      .catch(error => {
+        console.error("Error verificando favorito:", error);
+      });
+    }
+  }, [initialFavorite, id, user]);
 
   const toggleFavorite = async (e) => {
     e.preventDefault();
@@ -31,7 +70,7 @@ const PostCard = ({ id, title, description, price, image, onClick, initialFavori
     }
 
     try {
-      const response = await axios.post(
+      await axios.post(
         '/api/favorites',
         { publicacion_id: id },
         {
@@ -54,26 +93,59 @@ const PostCard = ({ id, title, description, price, image, onClick, initialFavori
     }
   };
 
-  return (
+  const CardComponent = viewMode === 'grid' ? (
     <Card>
-      <img src={image} alt={title} style={{ width: '100%' }} />
+      <ImageContainer>
+        <ProductImage src={image} alt={title} />
+      </ImageContainer>
       <h3>{title}</h3>
-      <p>{description}</p>
+      <p>{description.length > 100 ? `${description.substring(0, 100)}...` : description}</p>
       <p><strong>Precio:</strong> ${price}</p>
       <div className="d-flex gap-2">
         <Button variant="outline-primary" onClick={onClick}>
           Ver Detalle
         </Button>
 
-        <Button
-          variant={isFavorite ? 'warning' : 'outline-warning'}
-          onClick={toggleFavorite}
-        >
-          {isFavorite ? '💖 Quitar de Favoritos' : '🤍 Agregar a Favoritos'}
-        </Button>
+        {user && (
+          <Button
+            variant={isFavorite ? "warning" : "outline-warning"}
+            onClick={toggleFavorite}
+            disabled={isTogglingFavorite}
+          >
+            {isFavorite ? '💖' : '🤍'}
+          </Button>
+        )}
+      </div>
+    </Card>
+  ) : (
+    <Card className="d-flex flex-row p-3">
+      <ImageContainer style={{ width: '200px', height: '150px' }}>
+        <ProductImage src={image} alt={title} />
+      </ImageContainer>
+      <div className="ms-3 flex-grow-1">
+        <h3>{title}</h3>
+        <p>{description.length > 200 ? `${description.substring(0, 200)}...` : description}</p>
+        <p><strong>Precio:</strong> ${price}</p>
+        <div className="d-flex gap-2">
+          <Button variant="outline-primary" onClick={onClick}>
+            Ver Detalle
+          </Button>
+
+          {user && (
+            <Button
+              variant={isFavorite ? "warning" : "outline-warning"}
+              onClick={toggleFavorite}
+              disabled={isTogglingFavorite}
+            >
+              {isFavorite ? '💖 Quitar de Favoritos' : '🤍 Agregar a Favoritos'}
+            </Button>
+          )}
+        </div>
       </div>
     </Card>
   );
+
+  return CardComponent;
 };
 
 PostCard.propTypes = {
@@ -85,6 +157,7 @@ PostCard.propTypes = {
   onClick: PropTypes.func.isRequired,
   initialFavorite: PropTypes.bool,
   onToggleFavorite: PropTypes.func,
+  viewMode: PropTypes.oneOf(['grid', 'list']),
 };
 
 export default PostCard;

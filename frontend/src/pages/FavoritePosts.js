@@ -3,12 +3,14 @@ import { Container, Row, Col, Alert } from 'react-bootstrap';
 import PostCard from '../components/PostCard';
 import axios from 'axios';
 import { useUser } from '../context/UserContext';
+import { useNavigate } from 'react-router-dom'; // Añadir esta importación
 
 const FavoritePosts = () => {
   const [favorites, setFavorites] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const { user } = useUser();
+  const navigate = useNavigate(); // Añadir esta línea
 
   const fetchFavorites = async () => {
     const token = user?.token;
@@ -38,6 +40,7 @@ const FavoritePosts = () => {
 
   useEffect(() => {
     fetchFavorites();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleToggleFavorite = (postId, isNowFavorite) => {
@@ -45,6 +48,11 @@ const FavoritePosts = () => {
       // Si ya no es favorito, lo removemos del estado
       setFavorites((prev) => prev.filter((post) => post.id !== postId));
     }
+  };
+
+  // Añadir esta función para navegar al detalle del post
+  const handlePostClick = (postId) => {
+    navigate(`/post/${postId}`);
   };
 
   return (
@@ -68,7 +76,7 @@ const FavoritePosts = () => {
               price={Number(post.precio)}
               image={post.imagen}
               initialFavorite={true}
-              onClick={() => console.log(`🖱️ Click en favorito ID ${post.id}`)}
+              onClick={() => handlePostClick(post.id)} // Modificar esta línea
               onToggleFavorite={handleToggleFavorite}
             />
           </Col>
