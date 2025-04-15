@@ -1,44 +1,49 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
-export const UserContext = createContext();
+const UserContext = createContext();
 
-const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
+export const useUser = () => useContext(UserContext);
+
+export const UserProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+
+  // Cargar usuario desde localStorage al iniciar
+  useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    return storedUser ? JSON.parse(storedUser) : null;
-  });
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        localStorage.removeItem('user');
+      }
+    }
+  }, []);
 
   const login = (userData) => {
-    if (!userData || !userData.token) {
-      console.error('El token JWT no está presente en los datos del usuario.');
-      return;
-    }
-    console.log('Usuario autenticado:', userData);
+    console.log('Login con datos:', userData);
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
   const logout = () => {
+    console.log('Cerrando sesión');
     setUser(null);
     localStorage.removeItem('user');
   };
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+  // Añadir función para actualizar datos del usuario
+  const updateUser = (newUserData) => {
+    console.log('Actualizando datos de usuario:', newUserData);
+    setUser(newUserData);
+    localStorage.setItem('user', JSON.stringify(newUserData));
+  };
 
   return (
-    <UserContext.Provider value={{ user, login, logout }}>
+    <UserContext.Provider value={{ user, login, logout, updateUser }}>
       {children}
     </UserContext.Provider>
   );
 };
 
-export const useUser = () => {
-  return useContext(UserContext);
-};
-
-export default UserProvider;
+export { UserContext };

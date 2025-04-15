@@ -1,11 +1,9 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
-import { UserContext } from '../context/UserContext';
 import { Container, Row, Col, Button, Alert } from 'react-bootstrap';
 
 const PostDetailPage = () => {
-  const { user } = useContext(UserContext);
   const { id } = useParams();
   const navigate = useNavigate();
   const [post, setPost] = useState(null);
@@ -69,7 +67,7 @@ const PostDetailPage = () => {
         <Col md={6}>
           <h1>{post.titulo}</h1>
           <p><strong>Descripción:</strong> {post.descripcion}</p>
-          <p><strong>Categoría:</strong> {post.categoria}</p>
+          <p><strong>Categoría:</strong> {post.categoria || 'Sin categoría'}</p>
           <p><strong>Precio:</strong> ${post.precio}</p>
           <p><strong>Publicado por:</strong> {authorName || 'Usuario desconocido'}</p>
           <p><strong>Fecha de publicación:</strong> {new Date(post.fecha_creacion).toLocaleDateString()}</p>

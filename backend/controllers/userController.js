@@ -86,6 +86,58 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+// Actualizar el perfil del usuario
+exports.updateProfile = async (req, res) => {
+  try {
+    const { nombre, email, foto_perfil } = req.body;
+    const userId = req.user.id;
+
+    console.log('Actualizando perfil de usuario:', userId);
+    console.log('Datos recibidos:', { nombre, email, foto_perfil });
+
+    // Validación básica
+    if (!nombre || !email) {
+      return res.status(400).json({ error: 'El nombre y email son obligatorios' });
+    }
+
+    // Verificar si el email ya existe (y no pertenece al usuario actual)
+    const emailCheck = await pool.query(
+      'SELECT * FROM usuarios WHERE email = $1 AND id != $2',
+      [email, userId]
+    );
+
+    if (emailCheck.rows.length > 0) {
+      return res.status(400).json({ error: 'Este email ya está en uso por otro usuario' });
+    }
+
+    // Actualizar el perfil
+    const updatedUser = await pool.query(
+      'UPDATE usuarios SET nombre = $1, email = $2, foto_perfil = $3 WHERE id = $4 RETURNING id, nombre, email, foto_perfil',
+      [nombre, email, foto_perfil, userId]
+    );
+
+    if (updatedUser.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Log para verificar los datos actualizados
+    console.log('Perfil actualizado exitosamente:', updatedUser.rows[0]);
+    
+    // Actualizar los datos del usuario en la sesión si existe
+    req.user = {
+      ...req.user,
+      nombre: nombre,
+      email: email,
+      foto_perfil: foto_perfil
+    };
+
+    res.json(updatedUser.rows[0]);
+  } catch (err) {
+    console.error('Error al actualizar perfil:', err);
+    res.status(500).json({ error: 'Error al actualizar el perfil' });
+  }
+};
+
 // Crear una publicación (protegida)
 exports.createPost = async (req, res) => {
   try {

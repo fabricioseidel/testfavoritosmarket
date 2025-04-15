@@ -9,4 +9,7 @@ router.post('/', authMiddleware, favoritesController.toggleFavorite);
 // Obtener todas las publicaciones favoritas del usuario
 router.get('/', authMiddleware, favoritesController.getFavorites);
 
+// Verificar si una publicación es favorita
+router.get('/check/:id', authMiddleware, favoritesController.checkFavorite);
+
 module.exports = router;

@@ -13,4 +13,7 @@ router.get('/', authMiddleware, userController.getProfile);
 router.get('/stats', authMiddleware, userController.getUserStats);
 router.put('/update', authMiddleware, userController.updateProfile);
 
+// Ruta protegida para actualizar el perfil
+router.put('/', authMiddleware, userController.updateProfile);
+
 module.exports = router;

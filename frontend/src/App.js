@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import NavbarComponent from './components/NavbarComponent';
-import Footer from './components/Footer'; // Importamos el Footer
+import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import RegisterPage from './pages/RegisterPage';
@@ -10,8 +10,12 @@ import AboutPage from './pages/AboutPage';
 import CreatePostPage from './pages/CreatePostPage';
 import PostDetailPage from './pages/PostDetailPage';
 import FavoritePosts from './pages/FavoritePosts';
-import MyPostsPage from './pages/MyPostsPage'; // Importar la página
-import SearchResultsPage from './pages/SearchResultsPage'; // Importamos la página de resultados de búsqueda
+import MyPostsPage from './pages/MyPostsPage';
+import SearchResultsPage from './pages/SearchResultsPage';
+import EditPostPage from './pages/EditPostPage';
+
+// Importar estilos adicionales si son necesarios
+import './App.css'; // Si existe este archivo
 
 const App = () => {
   return (
@@ -30,10 +34,11 @@ const App = () => {
             <Route path="/post/:id" element={<PostDetailPage />} />
             <Route path="/favorites" element={<FavoritePosts />} />
             <Route path="/my-posts" element={<MyPostsPage />} />
-            <Route path="/search" element={<SearchResultsPage />} /> {/* Agregamos la ruta para los resultados de búsqueda */}
+            <Route path="/search" element={<SearchResultsPage />} />
+            <Route path="/edit-post/:id" element={<EditPostPage />} />
           </Routes>
         </div>
-        <Footer /> {/* Agregamos el Footer */}
+        <Footer />
       </div>
     </Router>
   );

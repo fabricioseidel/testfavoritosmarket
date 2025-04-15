@@ -1,100 +1,104 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Container, Table, Button, Badge, Alert } from 'react-bootstrap';
+import { Container, Table, Button, Badge, Alert, Modal } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { UserContext } from '../context/UserContext';
-
-const formatDate = (dateString) => {
-  if (!dateString) return 'Fecha no disponible';
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return 'Fecha no válida';
-  return date.toLocaleDateString('es-ES', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
 
 const MyPostsPage = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [postToDelete, setPostToDelete] = useState(null);
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchUserPosts = async () => {
-      try {
-        if (!user?.token) {
-          setError('Debes iniciar sesión para ver tus publicaciones');
-          setLoading(false);
-          return;
-        }
-
-        const response = await axios.get('/api/posts/user/posts', { // Corregir la ruta
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
-
-        setPosts(response.data);
-        setError(null);
-      } catch (err) {
-        console.error('Error al cargar publicaciones:', err);
-        setError('Error al cargar tus publicaciones');
-      } finally {
-        setLoading(false);
+  // Función auxiliar para obtener la fecha formateada
+  const getFechaFormateada = (post) => {
+    // Intentar con diferentes posibles nombres de campo
+    const fechaValue = post.fecha_creacion || post.fecha || post.created_at || post.createdAt || post.date;
+    
+    if (!fechaValue) {
+      // Si no hay campo de fecha, usar la fecha actual sin el texto "(aprox.)"
+      console.log('No se encontró campo de fecha para el post:', post.id);
+      return new Date().toLocaleDateString();
+    }
+    
+    try {
+      const fecha = new Date(fechaValue);
+      
+      // Verificar si la fecha es válida
+      if (isNaN(fecha.getTime())) {
+        console.warn('Fecha inválida:', fechaValue);
+        return 'Fecha inválida';
       }
-    };
+      
+      return fecha.toLocaleDateString();
+    } catch (e) {
+      console.error('Error al parsear fecha:', e);
+      return 'Error de fecha';
+    }
+  };
 
+  const fetchUserPosts = async () => {
+    try {
+      if (!user?.token) {
+        setError('Debes iniciar sesión para ver tus publicaciones');
+        setLoading(false);
+        return;
+      }
+
+      const response = await axios.get('/api/posts/user-posts', {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      
+      console.log('Datos recibidos de publicaciones:', response.data);
+      setPosts(response.data);
+      setError(null);
+    } catch (err) {
+      console.error('Error al cargar publicaciones:', err);
+      setError('Error al cargar tus publicaciones');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchUserPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleViewPost = (postId) => {
     navigate(`/post/${postId}`);
   };
-
-  const handleDeletePost = async (postId) => {
-    console.log('📢 Click en botón eliminar, ID:', postId);
+  
+  const confirmDelete = (postId) => {
+    setPostToDelete(postId);
+    setShowDeleteModal(true);
+  };
+  
+  const handleDeletePost = async () => {
+    if (!postToDelete) return;
     
     try {
-      // Primero verificamos que tenemos el ID y el token
-      if (!postId || !user?.token) {
-        console.error('❌ Falta ID o token:', { postId, token: user?.token });
-        return;
-      }
-
-      // Confirmación del usuario
-      if (!window.confirm('¿Estás seguro de que deseas eliminar esta publicación?')) {
-        console.log('❌ Usuario canceló la eliminación');
-        return;
-      }
-
-      console.log('🚀 Enviando solicitud de eliminación...');
-      const response = await axios({
-        method: 'DELETE',
-        url: `/api/posts/${postId}`,
-        headers: {
-          'Authorization': `Bearer ${user.token}`
-        }
+      await axios.delete(`/api/posts/${postToDelete}`, {
+        headers: { Authorization: `Bearer ${user.token}` }
       });
-
-      console.log('✅ Respuesta del servidor:', response.data);
       
-      // Actualizar el estado solo si la eliminación fue exitosa
-      setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
-      alert('Publicación eliminada con éxito');
+      // Actualizar la lista de publicaciones
+      setPosts(posts.filter(post => post.id !== postToDelete));
       
-    } catch (err) {
-      console.error('❌ Error completo:', err);
-      console.error('❌ Detalles del error:', {
-        mensaje: err.message,
-        respuesta: err.response?.data,
-        estado: err.response?.status,
-        headers: err.response?.headers
-      });
-      alert('Error al eliminar la publicación');
+      // Cerrar el modal
+      setShowDeleteModal(false);
+      setPostToDelete(null);
+    } catch (error) {
+      console.error('Error al eliminar publicación:', error);
+      alert('No se pudo eliminar la publicación');
     }
+  };
+
+  const handleEditPost = (postId) => {
+    navigate(`/edit-post/${postId}`);
   };
 
   if (loading) return <Container className="my-5"><p>Cargando publicaciones...</p></Container>;
@@ -126,24 +130,25 @@ const MyPostsPage = () => {
             <tr key={post.id}>
               <td>{post.titulo}</td>
               <td>${post.precio}</td>
-              <td>{formatDate(post.fecha_creacion)}</td>
+              <td>{getFechaFormateada(post)}</td>
               <td>
-                <Badge bg={post.estado === 'activo' ? 'success' : 'secondary'}>
-                  {post.estado}
+                <Badge bg="success">
+                  activo {/* Mostrar "activo" por defecto ya que la columna estado no existe */}
                 </Badge>
               </td>
               <td>
                 <div className="d-flex gap-2">
-                  <Button variant="outline-primary" size="sm">
+                  <Button 
+                    variant="outline-primary" 
+                    size="sm"
+                    onClick={() => handleEditPost(post.id)}
+                  >
                     Editar
                   </Button>
                   <Button 
                     variant="outline-danger" 
                     size="sm"
-                    onClick={() => {
-                      console.log('🖱️ Click en botón eliminar para post:', post.id);
-                      handleDeletePost(post.id);
-                    }}
+                    onClick={() => confirmDelete(post.id)}
                   >
                     Eliminar
                   </Button>
@@ -172,6 +177,24 @@ const MyPostsPage = () => {
           </Link>
         </div>
       )}
+      
+      {/* Modal de confirmación para eliminar */}
+      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirmar eliminación</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          ¿Estás seguro de que deseas eliminar esta publicación? Esta acción no se puede deshacer.
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={handleDeletePost}>
+            Eliminar
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };

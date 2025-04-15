@@ -59,3 +59,26 @@ exports.getFavorites = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener favoritos' });
   }
 };
+
+// ✅ Verificar si una publicación es favorita del usuario
+exports.checkFavorite = async (req, res) => {
+  try {
+    const publicacion_id = req.params.id;
+    const usuario_id = req.user.id;
+
+    if (!publicacion_id) {
+      return res.status(400).json({ error: 'El ID de la publicación es obligatorio.' });
+    }
+
+    // Verificar si está en favoritos
+    const check = await pool.query(
+      'SELECT * FROM favoritos WHERE usuario_id = $1 AND publicacion_id = $2',
+      [usuario_id, publicacion_id]
+    );
+
+    res.json({ isFavorite: check.rows.length > 0 });
+  } catch (err) {
+    console.error('❌ Error en checkFavorite:', err);
+    res.status(500).json({ error: 'Error al verificar favorito' });
+  }
+};

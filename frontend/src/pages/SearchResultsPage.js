@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Alert, Button, Form, ButtonGroup, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Alert, Button, Form, ButtonGroup } from 'react-bootstrap'; // Eliminar Spinner
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import PostCard from '../components/PostCard';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
+import CategorySelector from '../components/CategorySelector';
 
 const FilterSection = styled.div`
   background: white;
@@ -29,11 +30,26 @@ const SearchResultsPage = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('recent');
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
-  const [category, setCategory] = useState('all');
+  const [categoryId, setCategoryId] = useState('');
+  const [categories, setCategories] = useState([]);
   const query = searchParams.get('q');
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+
+  useEffect(() => {
+    // Cargar categorías
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('/api/categories');
+        setCategories(response.data);
+      } catch (err) {
+        console.error('Error al cargar categorías:', err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -53,6 +69,10 @@ const SearchResultsPage = () => {
           case 'recent':
             sortedResults.sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
             break;
+          default:
+            // Caso por defecto: ordenar por fecha más reciente
+            sortedResults.sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
+            break;
         }
 
         // Aplicar filtros de precio
@@ -65,8 +85,8 @@ const SearchResultsPage = () => {
         }
 
         // Aplicar filtro de categoría
-        if (category !== 'all') {
-          sortedResults = sortedResults.filter(item => item.categoria === category);
+        if (categoryId) {
+          sortedResults = sortedResults.filter(item => item.categoria_id === parseInt(categoryId));
         }
 
         setResults(sortedResults);
@@ -80,7 +100,7 @@ const SearchResultsPage = () => {
     if (query) {
       fetchResults();
     }
-  }, [query, sortBy, priceRange, category]);
+  }, [query, sortBy, priceRange, categoryId]);
 
   // Calcular páginas
   const totalPages = Math.ceil(results.length / itemsPerPage);
@@ -126,14 +146,14 @@ const SearchResultsPage = () => {
           </Col>
           <Col md={3}>
             <Form.Select 
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
               className="mb-2"
             >
-              <option value="all">Todas las categorías</option>
-              <option value="electronics">Electrónicos</option>
-              <option value="clothing">Ropa</option>
-              <option value="home">Hogar</option>
+              <option value="">Todas las categorías</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+              ))}
             </Form.Select>
           </Col>
           <Col md={4}>
