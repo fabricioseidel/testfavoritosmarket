@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 const pool = require('./db'); // Importar el archivo db.js
-const favoriteRoutes = require('./routes/favoriteRoutes'); // Nombre corregido
+const favoriteRoutes = require('./routes/favoriteRoutes'); // Nombre estandarizado
 const categoryRoutes = require('./routes/categoryRoutes'); // Importar las rutas de categorías
 const authRoutes = require('./routes/authRoutes'); // Importar las rutas de autenticación
 const userRoutes = require('./routes/userRoutes'); // Importar las rutas de usuarios
@@ -21,7 +21,12 @@ if (!process.env.JWT_SECRET) {
 }
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://favoritosmarket.netlify.app', 'https://favoritosmarket-api.onrender.com'] 
+    : 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
 
 // Configurar carpeta de uploads como directorio estático
