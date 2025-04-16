@@ -82,7 +82,7 @@ app.use('/api/upload', uploadRoutes); // Nueva ruta para cargas
 
 // Middleware para servir el frontend desde build en producción
 if (process.env.NODE_ENV === 'production') {
-  // Prioridad a las rutas de la API
+  // Solo configurar las rutas de la API
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/posts', postRoutes);
@@ -90,13 +90,10 @@ if (process.env.NODE_ENV === 'production') {
   app.use('/api/favorites', favoriteRoutes);
   app.use('/api/categories', categoryRoutes);
   app.use('/api/upload', uploadRoutes);
-
-  // Servir archivos estáticos desde la carpeta build
-  app.use(express.static(path.join(__dirname, '../frontend/build')));
   
-  // Todas las demás solicitudes GET no manejadas se envían a la aplicación React
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
+  // Respuesta simple para la ruta raíz
+  app.get('/', (req, res) => {
+    res.json({ message: 'FavoritosMarket API - La interfaz de usuario está disponible en Netlify' });
   });
 } else {
   // En desarrollo, solo configuramos las rutas de la API

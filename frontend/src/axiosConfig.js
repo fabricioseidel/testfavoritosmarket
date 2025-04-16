@@ -19,4 +19,16 @@ instance.interceptors.request.use(
   }
 );
 
+// Interceptor para manejar errores de autenticación
+instance.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response && error.response.status === 401) {
+      // Si recibimos un 401, podríamos redirigir al login
+      console.log('Sesión expirada o token inválido');
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default instance;
