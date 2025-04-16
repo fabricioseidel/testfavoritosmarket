@@ -3,8 +3,7 @@ import axios from 'axios';
 import { UserContext } from '../context/UserContext';
 import { Container, Form, Button, Alert, Row, Col } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-// eslint-disable-next-line no-unused-vars
-import CategorySelector from '../components/CategorySelector';
+import ImageUploader from '../components/ImageUploader';
 
 const CreatePostPage = () => {
   const [title, setTitle] = useState('');
@@ -85,50 +84,58 @@ const CreatePostPage = () => {
 
     setLoading(true);
 
-    // Formatear datos para enviar
-    const dataToSend = {
-      titulo: title,
-      descripcion: description,
-      categoria_id: parseInt(categoryId), // Convertir a número
-      precio: parseFloat(price),
-      imagen: image
-    };
-
-    console.log('Datos a enviar al servidor:', dataToSend);
-
     try {
+      console.log('Datos a enviar al servidor:', {
+        titulo: title,
+        descripcion: description,
+        categoria_id: parseInt(categoryId),
+        precio: parseFloat(price),
+        imagen: image
+      });
+
       const response = await axios.post(
         '/api/posts/create-post',
-        dataToSend,
+        {
+          titulo: title,
+          descripcion: description,
+          categoria_id: parseInt(categoryId),
+          precio: parseFloat(price),
+          imagen: image
+        },
         {
           headers: {
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user.token}` // Asegúrate de que este token se envía
           }
         }
       );
 
-      console.log('Respuesta del servidor:', response.data);
+      console.log('Publicación creada exitosamente:', response.data);
       setSuccess(true);
       
-      // Limpiar formulario
+      // Limpiar el formulario
       setTitle('');
       setDescription('');
       setCategoryId('');
       setPrice('');
       setImage('');
-
-      // Redirección después de un breve delay
+      
+      // Redirigir después de un breve retraso
       setTimeout(() => {
         navigate('/my-posts');
       }, 2000);
-    } catch (err) {
-      console.error('Error al crear la publicación:', err);
-      const errorMsg = err.response?.data?.error || 'Ocurrió un error al crear la publicación';
+    } catch (error) {
+      console.error('Error al crear la publicación:', error);
+      const errorMsg = error.response?.data?.error || 'Error al crear la publicación';
       setError(errorMsg);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Manejador para la subida de imagen
+  const handleImageUploaded = (imageUrl) => {
+    setImage(imageUrl);
   };
 
   return (
@@ -197,30 +204,10 @@ const CreatePostPage = () => {
           />
         </Form.Group>
 
-        <Form.Group className="mb-3">
-          <Form.Label>URL de la Imagen</Form.Label>
-          <Form.Control
-            type="url"
-            value={image}
-            onChange={(e) => setImage(e.target.value)}
-            placeholder="https://ejemplo.com/imagen.jpg"
-            required
-          />
-          {image && (
-            <div className="mt-2 text-center">
-              <p>Vista previa:</p>
-              <img 
-                src={image} 
-                alt="Vista previa" 
-                style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} 
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = 'https://via.placeholder.com/400x300?text=Imagen+no+disponible';
-                }}
-              />
-            </div>
-          )}
-        </Form.Group>
+        <ImageUploader 
+          onImageUploaded={handleImageUploaded}
+          initialImage={image}
+        />
         
         <div className="d-grid gap-2 mt-4">
           <Button 

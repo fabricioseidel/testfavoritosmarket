@@ -1,200 +1,145 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Container, Table, Button, Badge, Alert, Modal } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { Container, Row, Col, Alert, Spinner, Button } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
+import PostCard from '../components/PostCard';
+import axios from 'axios';
 
 const MyPostsPage = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [postToDelete, setPostToDelete] = useState(null);
   const { user } = useContext(UserContext);
-  const navigate = useNavigate();
 
-  // Función auxiliar para obtener la fecha formateada
-  const getFechaFormateada = (post) => {
-    // Intentar con diferentes posibles nombres de campo
-    const fechaValue = post.fecha_creacion || post.fecha || post.created_at || post.createdAt || post.date;
-    
-    if (!fechaValue) {
-      // Si no hay campo de fecha, usar la fecha actual sin el texto "(aprox.)"
-      console.log('No se encontró campo de fecha para el post:', post.id);
-      return new Date().toLocaleDateString();
-    }
-    
-    try {
-      const fecha = new Date(fechaValue);
-      
-      // Verificar si la fecha es válida
-      if (isNaN(fecha.getTime())) {
-        console.warn('Fecha inválida:', fechaValue);
-        return 'Fecha inválida';
-      }
-      
-      return fecha.toLocaleDateString();
-    } catch (e) {
-      console.error('Error al parsear fecha:', e);
-      return 'Error de fecha';
-    }
-  };
-
-  const fetchUserPosts = async () => {
-    try {
+  useEffect(() => {
+    const fetchUserPosts = async () => {
       if (!user?.token) {
         setError('Debes iniciar sesión para ver tus publicaciones');
         setLoading(false);
         return;
       }
 
-      const response = await axios.get('/api/posts/user-posts', {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      
-      console.log('Datos recibidos de publicaciones:', response.data);
-      setPosts(response.data);
-      setError(null);
-    } catch (err) {
-      console.error('Error al cargar publicaciones:', err);
-      setError('Error al cargar tus publicaciones');
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        console.log('Obteniendo publicaciones del usuario con ID:', user.id);
+        
+        // URL específica para obtener publicaciones del usuario
+        const response = await axios.get(`/api/posts/user/${user.id}`, {
+          headers: {
+            'Authorization': `Bearer ${user.token}`
+          }
+        });
 
-  useEffect(() => {
+        console.log('Datos recibidos de publicaciones:', response.data);
+        setPosts(Array.isArray(response.data) ? response.data : []);
+        
+        // Si no hay publicaciones, intentar también con usuario_id = null para proponer reclamar
+        if (response.data.length === 0) {
+          console.log('Consultando publicaciones sin dueño para reclamar');
+          const orphanPosts = await axios.get('/api/posts');
+          const unclaimedPosts = orphanPosts.data.filter(post => !post.usuario_id);
+          
+          if (unclaimedPosts.length > 0) {
+            console.log(`Encontradas ${unclaimedPosts.length} publicaciones sin dueño`);
+            // No establecemos aquí, solo generamos un mensaje de ayuda
+          }
+        }
+        
+        setError(null);
+      } catch (err) {
+        console.error('Error al obtener publicaciones:', err);
+        
+        if (err.response?.status === 401) {
+          setError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+        } else {
+          setError('Error al cargar tus publicaciones. Intenta de nuevo más tarde.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchUserPosts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const handleViewPost = (postId) => {
-    navigate(`/post/${postId}`);
-  };
-  
-  const confirmDelete = (postId) => {
-    setPostToDelete(postId);
-    setShowDeleteModal(true);
-  };
-  
-  const handleDeletePost = async () => {
-    if (!postToDelete) return;
-    
-    try {
-      await axios.delete(`/api/posts/${postToDelete}`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      
-      // Actualizar la lista de publicaciones
-      setPosts(posts.filter(post => post.id !== postToDelete));
-      
-      // Cerrar el modal
-      setShowDeleteModal(false);
-      setPostToDelete(null);
-    } catch (error) {
-      console.error('Error al eliminar publicación:', error);
-      alert('No se pudo eliminar la publicación');
-    }
-  };
+  if (loading) {
+    return (
+      <Container className="mt-5 text-center">
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </Spinner>
+      </Container>
+    );
+  }
 
-  const handleEditPost = (postId) => {
-    navigate(`/edit-post/${postId}`);
-  };
+  if (error) {
+    return (
+      <Container className="mt-5">
+        <Alert variant="danger">{error}</Alert>
+      </Container>
+    );
+  }
 
-  if (loading) return <Container className="my-5"><p>Cargando publicaciones...</p></Container>;
-  if (error) return <Container className="my-5"><Alert variant="danger">{error}</Alert></Container>;
+  if (!user) {
+    return (
+      <Container className="mt-5">
+        <Alert variant="warning">
+          Debes iniciar sesión para ver tus publicaciones
+        </Alert>
+      </Container>
+    );
+  }
 
   return (
-    <Container className="my-5">
+    <Container className="mt-5">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>Mis Publicaciones</h1>
-        <Link to="/create-post">
-          <Button variant="primary">
-            Nueva Publicación
+        <div>
+          <Button 
+            as={Link} 
+            to="/claim-posts"
+            variant="outline-info"
+            className="me-2"
+          >
+            Reclamar Publicaciones
           </Button>
-        </Link>
+          <Button 
+            as={Link} 
+            to="/create-post"
+            variant="primary"
+          >
+            Crear Nueva Publicación
+          </Button>
+        </div>
       </div>
 
-      <Table responsive striped hover className="shadow-sm">
-        <thead className="bg-light">
-          <tr>
-            <th>Título</th>
-            <th>Precio</th>
-            <th>Fecha</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {posts.map(post => (
-            <tr key={post.id}>
-              <td>{post.titulo}</td>
-              <td>${post.precio}</td>
-              <td>{getFechaFormateada(post)}</td>
-              <td>
-                <Badge bg="success">
-                  activo {/* Mostrar "activo" por defecto ya que la columna estado no existe */}
-                </Badge>
-              </td>
-              <td>
-                <div className="d-flex gap-2">
-                  <Button 
-                    variant="outline-primary" 
-                    size="sm"
-                    onClick={() => handleEditPost(post.id)}
-                  >
-                    Editar
-                  </Button>
-                  <Button 
-                    variant="outline-danger" 
-                    size="sm"
-                    onClick={() => confirmDelete(post.id)}
-                  >
-                    Eliminar
-                  </Button>
-                  <Button 
-                    variant="outline-info" 
-                    size="sm"
-                    onClick={() => handleViewPost(post.id)}
-                  >
-                    Ver
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-
-      {posts.length === 0 && (
-        <div className="text-center p-5 bg-light rounded">
-          <h3>No tienes publicaciones aún</h3>
-          <p className="text-muted">¡Comienza creando tu primera publicación!</p>
-          <Link to="/create-post">
-            <Button variant="primary">
-              Crear Publicación
+      {posts.length === 0 ? (
+        <Alert variant="info">
+          No tienes publicaciones asociadas a tu cuenta. Puedes crear una nueva publicación o reclamar 
+          publicaciones existentes si eres el creador original.
+          <div className="mt-3">
+            <Button as={Link} to="/claim-posts" variant="info" className="me-2">
+              Reclamar Publicaciones
             </Button>
-          </Link>
-        </div>
+            <Button as={Link} to="/create-post" variant="primary">
+              Crear Nueva Publicación
+            </Button>
+          </div>
+        </Alert>
+      ) : (
+        <Row>
+          {posts.map(post => (
+            <Col key={post.id} xs={12} sm={6} md={4} lg={3}>
+              <PostCard
+                id={post.id}
+                title={post.titulo}
+                description={post.descripcion}
+                price={parseFloat(post.precio)}
+                image={post.imagen}
+              />
+            </Col>
+          ))}
+        </Row>
       )}
-      
-      {/* Modal de confirmación para eliminar */}
-      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Confirmar eliminación</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          ¿Estás seguro de que deseas eliminar esta publicación? Esta acción no se puede deshacer.
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
-            Cancelar
-          </Button>
-          <Button variant="danger" onClick={handleDeletePost}>
-            Eliminar
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </Container>
   );
 };

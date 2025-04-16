@@ -3,43 +3,41 @@ const pool = require('../db');
 // Crear una nueva publicación
 exports.createPost = async (req, res) => {
   try {
-    const { titulo, descripcion, categoria_id, precio, imagen } = req.body;
-
-    if (!req.user) {
-      return res.status(401).json({ error: 'Usuario no autenticado.' });
+    // Verificar que tenemos un usuario autenticado
+    if (!req.user || !req.user.id) {
+      console.error('❌ createPost - No hay usuario autenticado');
+      return res.status(401).json({ error: 'Usuario no autenticado' });
     }
 
-    console.log('Datos recibidos para creación:', req.body);
-    
-    // Validar campos
-    if (!titulo || !descripcion || !categoria_id || !precio || !imagen) {
-      console.log('Validación fallida al crear:', { titulo, descripcion, categoria_id, precio, imagen });
-      return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
+    const { titulo, descripcion, precio, categoria_id } = req.body;
+    let imagen = req.file ? `/uploads/${req.file.filename}` : null;
+
+    // Log para depuración
+    console.log('📝 createPost - Datos recibidos:', {
+      titulo, descripcion, precio, categoria_id, 
+      imagen: imagen ? '[IMAGEN]' : 'null',
+      usuario_id: req.user.id // Confirmamos que tenemos ID de usuario
+    });
+
+    // Validación de campos básica
+    if (!titulo || !descripcion || !precio || !categoria_id) {
+      return res.status(400).json({ error: 'Todos los campos son obligatorios' });
     }
 
-    console.log('Datos enviados a la base de datos:', { titulo, descripcion, categoria_id, precio, imagen, usuario_id: req.user.id });
-
-    const newPost = await pool.query(
-      'INSERT INTO publicaciones (titulo, descripcion, categoria_id, precio, imagen, usuario_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [titulo, descripcion, categoria_id, precio, imagen, req.user.id]
+    // IMPORTANTE: Asegurarnos de que usuario_id se incluya explícitamente
+    const result = await pool.query(
+      `INSERT INTO publicaciones (titulo, descripcion, precio, imagen, categoria_id, usuario_id) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING *`,
+      [titulo, descripcion, precio, imagen, categoria_id, req.user.id]
     );
 
-    // Obtener el nombre de la categoría para incluirlo en la respuesta
-    const categoryResult = await pool.query(
-      'SELECT nombre FROM categorias WHERE id = $1',
-      [categoria_id]
-    );
-    
-    const postData = {
-      ...newPost.rows[0],
-      categoria: categoryResult.rows.length > 0 ? categoryResult.rows[0].nombre : 'Sin categoría'
-    };
+    console.log(`✅ createPost - Publicación creada ID: ${result.rows[0].id}, Usuario: ${result.rows[0].usuario_id}`);
 
-    console.log('✅ Publicación creada correctamente:', postData);
-    res.status(201).json(postData);
+    res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error('❌ Error al crear la publicación:', err);
-    res.status(500).json({ error: 'Error al crear la publicación.' });
+    console.error('❌ Error al crear publicación:', err);
+    res.status(500).json({ error: 'Error al crear la publicación' });
   }
 };
 
@@ -175,13 +173,15 @@ exports.searchPosts = async (req, res) => {
 
     console.log('🔍 Buscando publicaciones con:', q);
 
-    // Búsqueda en título, descripción y categoría
+    // Búsqueda modificada para usar JOIN con categorías
     const searchTerm = `%${q}%`;
     const result = await pool.query(
-      `SELECT * FROM publicaciones 
-       WHERE titulo ILIKE $1 
-       OR descripcion ILIKE $1 
-       OR categoria ILIKE $1`,
+      `SELECT p.*, c.nombre as categoria 
+       FROM publicaciones p
+       LEFT JOIN categorias c ON p.categoria_id = c.id
+       WHERE p.titulo ILIKE $1 
+       OR p.descripcion ILIKE $1 
+       OR c.nombre ILIKE $1`,
       [searchTerm]
     );
 

@@ -4,6 +4,7 @@ import { UserContext } from '../context/UserContext';
 import { Container, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import CategorySelector from '../components/CategorySelector';
+import ImageUploader from '../components/ImageUploader'; // Importamos el componente
 
 const EditPostPage = () => {
   const { id } = useParams();
@@ -156,6 +157,11 @@ const EditPostPage = () => {
     }
   };
 
+  // Manejador para la imagen subida
+  const handleImageUploaded = (imageUrl) => {
+    setImage(imageUrl);
+  };
+
   return (
     <Container className="mt-5">
       <h1 className="text-center mb-4">Editar Publicación</h1>
@@ -211,27 +217,11 @@ const EditPostPage = () => {
             />
           </Form.Group>
 
-          <Form.Group controlId="formImage" className="mb-3">
-            <Form.Label>Imagen (URL)</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Ingresa la URL de la imagen"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              required
-            />
-            {image && (
-              <div className="mt-2">
-                <p>Vista previa:</p>
-                <img 
-                  src={image} 
-                  alt="Vista previa" 
-                  style={{ maxWidth: '200px', maxHeight: '200px' }} 
-                  onError={(e) => {e.target.onerror = null; e.target.src='https://via.placeholder.com/200x200?text=Imagen+no+disponible'}}
-                />
-              </div>
-            )}
-          </Form.Group>
+          {/* Reemplazamos el campo de imagen con ImageUploader */}
+          <ImageUploader 
+            onImageUploaded={handleImageUploaded}
+            initialImage={image}
+          />
 
           <div className="d-flex justify-content-between">
             <Button variant="secondary" onClick={() => navigate('/my-posts')} className="me-2">

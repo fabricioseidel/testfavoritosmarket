@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix ../frontend && npm run build --prefix ../frontend",
     "test": "jest --detectOpenHandles --forceExit --config ./jest.config.js",
     "test:watch": "jest --watch --config ./jest.config.js",
     "test:coverage": "jest --coverage --config ./jest.config.js",
@@ -22,7 +23,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.8.0",
     "multer": "^1.4.5-lts.2",
-    "pg": "^8.14.1"
+    "pg": "^8.14.1",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.7",
