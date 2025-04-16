@@ -1,17 +1,22 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
-import { Button } from 'react-bootstrap';
-import axios from 'axios';
+import { Button, Badge } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
+import { useCart } from '../context/CartContext';
+import axios from 'axios';
 
-const Card = styled.div`
+const StyledCard = styled.div`
   border: 1px solid #ddd;
   padding: 16px;
-  margin: 16px;
+  margin-bottom: 16px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease-in-out;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   
   &:hover {
     transform: translateY(-5px);
@@ -25,6 +30,7 @@ const ImageContainer = styled.div`
   overflow: hidden;
   border-radius: 6px;
   margin-bottom: 12px;
+  position: relative;
 `;
 
 const ProductImage = styled.img`
@@ -38,126 +44,202 @@ const ProductImage = styled.img`
   }
 `;
 
-const PostCard = ({ id, title, description, price, image, onClick, initialFavorite = false, onToggleFavorite, viewMode = 'grid' }) => {
+const PostCard = ({ id, title, price, description, image, onFavorite, onClaim }) => {
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isInCart, setIsInCart] = useState(false);
   const { user } = useContext(UserContext);
-  const [isFavorite, setIsFavorite] = useState(initialFavorite);
-  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
-
+  const { cart, addToCart, removeFromCart } = useCart();
+  const navigate = useNavigate();
+  
   useEffect(() => {
-    setIsFavorite(initialFavorite);
-    
-    // Si el usuario está autenticado, verificar si el post está en favoritos
-    if (user?.token && id) {
-      axios.get(`/api/favorites/check/${id}`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      })
-      .then(response => {
+    const productInCart = cart.find(item => item.id === id);
+    setIsInCart(!!productInCart);
+  }, [cart, id]);
+  
+  useEffect(() => {
+    if (!user) return;
+
+    const checkFavorite = async () => {
+      try {
+        const response = await axios.get(`/api/favorites/check/${id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`
+          }
+        });
         setIsFavorite(response.data.isFavorite);
-      })
-      .catch(error => {
-        console.error("Error verificando favorito:", error);
-      });
-    }
-  }, [initialFavorite, id, user]);
+      } catch (error) {
+        console.error('Error al verificar favorito:', error);
+      }
+    };
+
+    checkFavorite();
+  }, [id, user]);
 
   const toggleFavorite = async (e) => {
-    e.preventDefault();
     e.stopPropagation();
-
-    if (!user || !user.token) {
-      alert('Debes iniciar sesión para guardar favoritos');
+    
+    if (!user?.token) {
+      alert('Debes iniciar sesión para añadir a favoritos');
       return;
     }
 
     try {
-      await axios.post(
+      const claimResponse = await axios.post(
         '/api/favorites',
         { publicacion_id: id },
         {
           headers: {
             Authorization: `Bearer ${user.token}`,
-            'Content-Type': 'application/json',
-          },
+            'Content-Type': 'application/json'
+          }
         }
       );
 
-      const newStatus = !isFavorite;
-      setIsFavorite(newStatus);
-
-      if (onToggleFavorite) {
-        onToggleFavorite(id, newStatus);
+      setIsFavorite(!isFavorite);
+      
+      if (onFavorite) {
+        onFavorite(id, !isFavorite);
       }
-    } catch (err) {
-      console.error('❌ Error al alternar favorito:', err.response?.data || err.message);
-      alert('Ocurrió un error al modificar los favoritos.');
+    } catch (error) {
+      console.error('Error al gestionar favorito:', error);
+      alert('Error al gestionar favorito');
     }
   };
 
-  const CardComponent = viewMode === 'grid' ? (
-    <Card>
+  const handleClaim = async (e) => {
+    e.stopPropagation();
+
+    if (!user?.token) {
+      alert('Debes iniciar sesión para reclamar esta publicación');
+      return;
+    }
+
+    try {
+      const claimResponse = await axios.put(`/api/posts/claim/${id}`, {}, {
+        headers: { 
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Publicación reclamada:', claimResponse.data);
+      
+      alert('Publicación reclamada exitosamente');
+      
+      if (onClaim) {
+        onClaim(id);
+      }
+    } catch (error) {
+      console.error('Error al reclamar publicación:', error.response?.data || error);
+      alert(error.response?.data?.error || 'Error al reclamar la publicación');
+    }
+  };
+  
+  const handleCartAction = (e) => {
+    e.stopPropagation();
+    
+    const product = {
+      id,
+      title,
+      description,
+      price,
+      image,
+      quantity: 1
+    };
+    
+    if (isInCart) {
+      removeFromCart(id);
+      
+      const tempAlert = document.createElement('div');
+      tempAlert.className = 'position-fixed bottom-0 end-0 p-3';
+      tempAlert.style.zIndex = 1050;
+      tempAlert.innerHTML = `
+        <div class="toast show" role="alert">
+          <div class="toast-body bg-info text-white">
+            ✓ Producto eliminado del carrito
+          </div>
+        </div>
+      `;
+      document.body.appendChild(tempAlert);
+      setTimeout(() => document.body.removeChild(tempAlert), 2000);
+    } else {
+      addToCart(product);
+      
+      const tempAlert = document.createElement('div');
+      tempAlert.className = 'position-fixed bottom-0 end-0 p-3';
+      tempAlert.style.zIndex = 1050;
+      tempAlert.innerHTML = `
+        <div class="toast show" role="alert">
+          <div class="toast-body bg-success text-white">
+            ✓ Producto añadido al carrito
+          </div>
+        </div>
+      `;
+      document.body.appendChild(tempAlert);
+      setTimeout(() => document.body.removeChild(tempAlert), 2000);
+    }
+  };
+
+  return (
+    <StyledCard>
       <ImageContainer>
         <ProductImage src={image} alt={title} />
+        {isInCart && (
+          <Badge 
+            bg="success" 
+            className="position-absolute top-0 end-0 m-2 p-2"
+            style={{ zIndex: 10 }}
+          >
+            En Carrito
+          </Badge>
+        )}
       </ImageContainer>
       <h3>{title}</h3>
       <p>{description.length > 100 ? `${description.substring(0, 100)}...` : description}</p>
       <p><strong>Precio:</strong> ${price}</p>
-      <div className="d-flex gap-2">
-        <Button variant="outline-primary" onClick={onClick}>
+      <div className="d-flex gap-2 flex-wrap">
+        <Button variant="outline-primary" onClick={() => navigate(`/post/${id}`)}>
           Ver Detalle
         </Button>
-
+        
+        <Button 
+          variant={isInCart ? "success" : "primary"}
+          onClick={handleCartAction}
+        >
+          {isInCart ? '✓ En Carrito' : '🛒 Añadir al carrito'}
+        </Button>
+        
         {user && (
           <Button
             variant={isFavorite ? "warning" : "outline-warning"}
             onClick={toggleFavorite}
-            disabled={isTogglingFavorite}
+            className={isFavorite ? "favorite-active" : ""}
           >
-            {isFavorite ? '💖' : '🤍'}
+            {isFavorite ? '💖 Favorito' : '🤍 Favorito'}
+          </Button>
+        )}
+        
+        {onClaim && user && (
+          <Button 
+            variant="outline-success"
+            onClick={handleClaim}
+          >
+            ✋ Reclamar
           </Button>
         )}
       </div>
-    </Card>
-  ) : (
-    <Card className="d-flex flex-row p-3">
-      <ImageContainer style={{ width: '200px', height: '150px' }}>
-        <ProductImage src={image} alt={title} />
-      </ImageContainer>
-      <div className="ms-3 flex-grow-1">
-        <h3>{title}</h3>
-        <p>{description.length > 200 ? `${description.substring(0, 200)}...` : description}</p>
-        <p><strong>Precio:</strong> ${price}</p>
-        <div className="d-flex gap-2">
-          <Button variant="outline-primary" onClick={onClick}>
-            Ver Detalle
-          </Button>
-
-          {user && (
-            <Button
-              variant={isFavorite ? "warning" : "outline-warning"}
-              onClick={toggleFavorite}
-              disabled={isTogglingFavorite}
-            >
-              {isFavorite ? '💖 Quitar de Favoritos' : '🤍 Agregar a Favoritos'}
-            </Button>
-          )}
-        </div>
-      </div>
-    </Card>
+    </StyledCard>
   );
-
-  return CardComponent;
 };
 
 PostCard.propTypes = {
-  id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+  id: PropTypes.number.isRequired,
   title: PropTypes.string.isRequired,
-  description: PropTypes.string.isRequired,
   price: PropTypes.number.isRequired,
+  description: PropTypes.string.isRequired,
   image: PropTypes.string.isRequired,
-  onClick: PropTypes.func.isRequired,
-  initialFavorite: PropTypes.bool,
-  onToggleFavorite: PropTypes.func,
-  viewMode: PropTypes.oneOf(['grid', 'list']),
+  onClaim: PropTypes.func,
+  onFavorite: PropTypes.func
 };
 
 export default PostCard;

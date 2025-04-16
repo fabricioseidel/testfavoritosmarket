@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Form, Button, Container, Row, Col, Alert } from 'react-bootstrap';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import RegistrationImageUploader from '../components/RegistrationImageUploader';
 
 const RegisterPage = () => {
   const [email, setEmail] = useState('');
@@ -10,27 +11,35 @@ const RegisterPage = () => {
   const [fotoPerfil, setFotoPerfil] = useState('');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const navigate = useNavigate(); // Para redirigir al usuario después del registro
+  const navigate = useNavigate();
+
+  // Manejador para la imagen cargada
+  const handleImageUploaded = (imageUrl) => {
+    setFotoPerfil(imageUrl);
+  };
 
   // Manejar el envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validar campos
-    if (!email || !password || !nombre || !fotoPerfil) {
-      setError('Por favor, completa todos los campos.');
+    // Validar campos obligatorios
+    if (!email || !password || !nombre) {
+      setError('Por favor, completa los campos obligatorios.');
       setSuccess(false);
       return;
     }
+    
+    const userData = {
+      email,
+      password,
+      nombre,
+      foto_perfil: fotoPerfil || ''
+    };
 
     try {
-      // Enviar solicitud al backend
-      const response = await axios.post('/api/auth/register', {
-        email,
-        password,
-        nombre,
-        foto_perfil: fotoPerfil,
-      });
+      // Renombrada 'response' a 'registerResponse' y usada para debug
+      const registerResponse = await axios.post('/api/auth/register', userData);
+      console.log('Registro exitoso:', registerResponse.data);
 
       // Si el registro es exitoso
       setError(null);
@@ -63,46 +72,45 @@ const RegisterPage = () => {
 
           <Form onSubmit={handleSubmit}>
             <Form.Group controlId="formNombre" className="mb-3">
-              <Form.Label>Nombre</Form.Label>
+              <Form.Label>Nombre <span className="text-danger">*</span></Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Ingresa tu nombre"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
+                required
               />
             </Form.Group>
 
             <Form.Group controlId="formEmail" className="mb-3">
-              <Form.Label>Email</Form.Label>
+              <Form.Label>Email <span className="text-danger">*</span></Form.Label>
               <Form.Control
                 type="email"
                 placeholder="Ingresa tu email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </Form.Group>
 
             <Form.Group controlId="formPassword" className="mb-3">
-              <Form.Label>Contraseña</Form.Label>
+              <Form.Label>Contraseña <span className="text-danger">*</span></Form.Label>
               <Form.Control
                 type="password"
                 placeholder="Ingresa tu contraseña"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
               />
             </Form.Group>
 
-            <Form.Group controlId="formFotoPerfil" className="mb-3">
-              <Form.Label>Foto de Perfil (URL)</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Ingresa la URL de tu foto de perfil"
-                value={fotoPerfil}
-                onChange={(e) => setFotoPerfil(e.target.value)}
-              />
-            </Form.Group>
+            {/* Componente de carga de imágenes específico para registro */}
+            <RegistrationImageUploader 
+              onImageUploaded={handleImageUploaded}
+              initialImage={fotoPerfil}
+            />
 
-            <Button variant="primary" type="submit" className="w-100">
+            <Button variant="primary" type="submit" className="w-100 mt-3">
               Registrarse
             </Button>
           </Form>

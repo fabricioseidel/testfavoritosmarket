@@ -1,49 +1,61 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 
-const UserContext = createContext();
+export const UserContext = createContext();
 
-export const useUser = () => useContext(UserContext);
+// Custom hook para usar el contexto de usuario más fácilmente
+export const useUser = () => {
+  const context = useContext(UserContext);
+  if (context === undefined) {
+    throw new Error('useUser debe ser usado dentro de un UserProvider');
+  }
+  return context;
+};
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Cargar usuario desde localStorage al iniciar
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        console.log('Usuario cargado desde localStorage:', {
+          nombre: parsedUser.nombre,
+          id: parsedUser.id,
+          tokenPresente: !!parsedUser.token
+        });
       } catch (error) {
-        console.error('Error parsing stored user data:', error);
+        console.error('Error al parsear usuario desde localStorage:', error);
         localStorage.removeItem('user');
       }
     }
+    setLoading(false);
   }, []);
 
+  // Función para iniciar sesión
   const login = (userData) => {
-    console.log('Login con datos:', userData);
+    console.log('Guardando datos de usuario en contexto:', {
+      nombre: userData.nombre,
+      id: userData.id,
+      tokenPresente: !!userData.token
+    });
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
+  // Función para cerrar sesión
   const logout = () => {
-    console.log('Cerrando sesión');
     setUser(null);
     localStorage.removeItem('user');
-  };
-
-  // Añadir función para actualizar datos del usuario
-  const updateUser = (newUserData) => {
-    console.log('Actualizando datos de usuario:', newUserData);
-    setUser(newUserData);
-    localStorage.setItem('user', JSON.stringify(newUserData));
+    console.log('Sesión cerrada, usuario eliminado del contexto');
   };
 
   return (
-    <UserContext.Provider value={{ user, login, logout, updateUser }}>
+    <UserContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </UserContext.Provider>
   );
 };
-
-export { UserContext };

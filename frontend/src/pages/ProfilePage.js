@@ -1,166 +1,144 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { Container, Row, Col, Form, Button, Image, Alert } from 'react-bootstrap';
 import { UserContext } from '../context/UserContext';
 import axios from 'axios';
-import { Container, Row, Col, Form, Button, Alert, Card, Image, Spinner } from 'react-bootstrap';
 import ImageUploader from '../components/ImageUploader';
 
 const ProfilePage = () => {
-  const { user, updateUser } = useContext(UserContext); // Asegúrate de que updateUser está disponible
-  const [profileData, setProfileData] = useState({ nombre: '', email: '', foto_perfil: '' });
-  const [isEditing, setIsEditing] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [editData, setEditData] = useState({
-    nombre: '',
-    email: '',
-    foto_perfil: ''
-  });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  // Función para cargar los datos del perfil
+  // Campos editables
+  const [nombre, setNombre] = useState('');
+  const [fotoPerfil, setFotoPerfil] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Obtener el contexto del usuario
+  const { user, login } = useContext(UserContext);
+
+  // Imagen base64 para usar como fallback
+  const defaultProfileImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5OTkiPlNpbiBJbWFnZW48L3RleHQ+PC9zdmc+';
+
+  // Cargar datos del perfil
   const loadProfileData = async () => {
-    if (!user?.token) {
-      setError('Debes iniciar sesión para ver tu perfil');
-      setLoading(false);
-      return;
-    }
-
     try {
-      const response = await axios.get('/api/profile', {
+      if (!user || !user.token) {
+        console.error('No hay usuario autenticado para cargar perfil');
+        setError('Debes iniciar sesión para ver tu perfil');
+        setLoading(false);
+        return;
+      }
+
+      console.log('Cargando perfil con token:', user.token.substring(0, 15) + '...');
+
+      // Hacer la solicitud al endpoint correcto usando el token actual
+      const response = await axios.get('/api/auth/profile', {
         headers: {
-          Authorization: `Bearer ${user.token}`
+          'Authorization': `Bearer ${user.token}`
         }
       });
 
       console.log('Datos de perfil recibidos:', response.data);
       
-      // Verificar si los datos tienen el formato esperado
-      if (!response.data || !response.data.nombre) {
-        throw new Error('Formato de respuesta no válido');
-      }
-      
+      // Actualizar el estado con los datos del perfil
       setProfileData(response.data);
-      setEditData({
-        nombre: response.data.nombre || '',
-        email: response.data.email || '',
-        foto_perfil: response.data.foto_perfil || ''
-      });
+      setNombre(response.data.nombre || '');
+      setFotoPerfil(response.data.foto_perfil || '');
       setError('');
     } catch (err) {
       console.error('Error al cargar datos del perfil:', err);
-      setError('No se pudieron cargar los datos del perfil. Por favor, intenta de nuevo más tarde.');
+      
+      if (err.response?.status === 401) {
+        // Error de autenticación
+        setError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+      } else {
+        setError('No se pudieron cargar los datos del perfil. Intenta de nuevo más tarde.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Cargar datos al montar el componente
   useEffect(() => {
     loadProfileData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user?.token, loadProfileData]); // Añadido loadProfileData como dependencia
 
-  const handleEditToggle = () => {
-    setIsEditing(!isEditing);
-    // Reiniciar datos de edición al estado actual
-    setEditData({
-      nombre: profileData.nombre || '',
-      email: profileData.email || '',
-      foto_perfil: profileData.foto_perfil || ''
-    });
-    setError('');
-    setSuccess('');
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditData({
-      ...editData,
-      [name]: value
-    });
-  };
-
-  const handleProfileImageUploaded = (imageUrl) => {
-    setEditData({
-      ...editData,
-      foto_perfil: imageUrl
-    });
-  };
-
-  const handleSubmit = async (e) => {
+  const handleUpdateProfile = async (e) => {
     e.preventDefault();
     
-    // Validaciones básicas
-    if (!editData.nombre.trim() || !editData.email.trim()) {
-      setError('El nombre y el email son obligatorios');
-      return;
-    }
-    
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(editData.email)) {
-      setError('El formato del email no es válido');
-      return;
-    }
-
-    setLoading(true);
-    
     try {
-      console.log('Enviando datos para actualización:', editData);
-      const response = await axios.put('/api/profile', editData, {
+      if (!user?.token) {
+        setError('Debes iniciar sesión para actualizar tu perfil');
+        return;
+      }
+
+      const updateData = {
+        nombre,
+        foto_perfil: fotoPerfil
+      };
+
+      // Renombrada 'response' a 'updateResponse' para usar la variable
+      const updateResponse = await axios.put('/api/auth/profile', updateData, {
         headers: {
-          Authorization: `Bearer ${user.token}`,
+          'Authorization': `Bearer ${user.token}`,
           'Content-Type': 'application/json'
         }
       });
 
-      console.log('Respuesta del servidor:', response.data);
-      
+      console.log('Perfil actualizado:', updateResponse.data);
+
       // Actualizar datos locales
-      setProfileData(response.data);
-      
-      // IMPORTANTE: Actualizar el contexto de usuario con los nuevos datos
-      if (updateUser) {
-        updateUser({
-          ...user,
-          user: {
-            ...user.user,
-            nombre: response.data.nombre,
-            email: response.data.email,
-            foto_perfil: response.data.foto_perfil
-          }
-        });
-      }
-      
-      setSuccess('Perfil actualizado correctamente');
+      setProfileData({
+        ...profileData,
+        ...updateData
+      });
+
+      // Actualizar contexto del usuario
+      login({
+        ...user,
+        nombre,
+        foto_perfil: fotoPerfil
+      });
+
+      setSuccess(true);
       setIsEditing(false);
       
-      // Recargar la página después de 1 segundo para asegurar que los cambios se reflejen
+      // Ocultar mensaje de éxito después de 3 segundos
       setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+        setSuccess(false);
+      }, 3000);
     } catch (err) {
-      console.error('Error actualizando perfil:', err);
-      if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError('Ocurrió un error al actualizar el perfil');
-      }
-    } finally {
-      setLoading(false);
+      console.error('Error al actualizar perfil:', err);
+      setError('No se pudo actualizar el perfil. Intenta de nuevo más tarde.');
     }
   };
 
   // Función para manejar URLs de imagen inválidas
   const handleImageError = (e) => {
-    e.target.src = 'https://via.placeholder.com/150?text=Imagen+no+disponible';
+    // Prevenimos el bucle infinito verificando si ya hemos intentado cargar una imagen de respaldo
+    if (e.target.hasAttribute('data-fallback-applied')) {
+      return; // Ya aplicamos una imagen de respaldo, no hacemos nada más
+    }
+    
+    // Marcamos que hemos aplicado una imagen de respaldo
+    e.target.setAttribute('data-fallback-applied', 'true');
+    
+    // Usamos una imagen base64 minimalista
+    e.target.src = defaultProfileImage;
   };
 
-  if (loading && !profileData.nombre) {
+  // Manejar la subida de la imagen de perfil
+  const handleImageUploaded = (imageUrl) => {
+    setFotoPerfil(imageUrl);
+  };
+
+  if (loading) {
     return (
       <Container className="mt-5 text-center">
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </Spinner>
+        <p>Cargando datos del perfil...</p>
       </Container>
     );
   }
@@ -169,7 +147,7 @@ const ProfilePage = () => {
     return (
       <Container className="mt-5">
         <Alert variant="warning">
-          Debes iniciar sesión para ver tu perfil.
+          Debes iniciar sesión para ver tu perfil
         </Alert>
       </Container>
     );
@@ -177,91 +155,80 @@ const ProfilePage = () => {
 
   return (
     <Container className="mt-5">
-      <Row className="justify-content-md-center">
-        <Col md={8}>
-          <Card className="shadow">
-            <Card.Header className="d-flex justify-content-between align-items-center bg-primary text-white">
-              <h3>Mi Perfil</h3>
-              <Button 
-                variant={isEditing ? "secondary" : "light"} 
-                onClick={handleEditToggle}
-              >
-                {isEditing ? 'Cancelar' : 'Editar Perfil'}
-              </Button>
-            </Card.Header>
-            <Card.Body>
-              {error && <Alert variant="danger">{error}</Alert>}
-              {success && <Alert variant="success">{success}</Alert>}
+      <h1>Mi Perfil</h1>
+      {error && <Alert variant="danger">{error}</Alert>}
+      {success && <Alert variant="success">¡Perfil actualizado con éxito!</Alert>}
 
-              {isEditing ? (
-                <Form onSubmit={handleSubmit}>
-                  <Row className="mb-4">
-                    <Col md={4} className="text-center">
-                      <Image 
-                        src={editData.foto_perfil || 'https://via.placeholder.com/150'} 
-                        roundedCircle 
-                        style={{ width: '150px', height: '150px', objectFit: 'cover' }}
-                        onError={handleImageError}
-                      />
-                      
-                      <div className="mt-3">
-                        <ImageUploader 
-                          onImageUploaded={handleProfileImageUploaded}
-                          initialImage={editData.foto_perfil}
-                        />
-                      </div>
-                    </Col>
-                    <Col md={8}>
-                      <Form.Group className="mb-3">
-                        <Form.Label>Nombre</Form.Label>
-                        <Form.Control
-                          type="text"
-                          name="nombre"
-                          value={editData.nombre}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </Form.Group>
-                      <Form.Group className="mb-3">
-                        <Form.Label>Email</Form.Label>
-                        <Form.Control
-                          type="email"
-                          name="email"
-                          value={editData.email}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                  <div className="d-flex justify-content-end">
-                    <Button variant="secondary" onClick={handleEditToggle} className="me-2">
-                      Cancelar
-                    </Button>
-                    <Button variant="success" type="submit" disabled={loading}>
-                      {loading ? 'Guardando...' : 'Guardar Cambios'}
-                    </Button>
-                  </div>
-                </Form>
-              ) : (
-                <Row>
-                  <Col md={4} className="text-center">
-                    <Image 
-                      src={profileData.foto_perfil || 'https://via.placeholder.com/150?text=Sin+Imagen'} 
-                      roundedCircle 
-                      style={{ width: '150px', height: '150px', objectFit: 'cover' }} 
-                      onError={handleImageError}
-                    />
-                  </Col>
-                  <Col md={8}>
-                    <h4>{profileData.nombre}</h4>
-                    <p><strong>Email:</strong> {profileData.email}</p>
-                    <p><strong>ID de usuario:</strong> {user?.id || 'No disponible'}</p>
-                  </Col>
-                </Row>
-              )}
-            </Card.Body>
-          </Card>
+      <Row>
+        <Col md={4} className="text-center mb-4">
+          <Image 
+            src={fotoPerfil || defaultProfileImage} 
+            roundedCircle 
+            width={150} 
+            height={150} 
+            className="mb-3"
+            onError={handleImageError}
+          />
+          {isEditing && (
+            <ImageUploader 
+              onImageUploaded={handleImageUploaded}
+              initialImage={fotoPerfil}
+            />
+          )}
+        </Col>
+
+        <Col md={8}>
+          <Form onSubmit={handleUpdateProfile}>
+            <Form.Group className="mb-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control 
+                type="email" 
+                value={profileData?.email || ''} 
+                disabled 
+              />
+              <Form.Text className="text-muted">
+                No es posible cambiar el email asociado a tu cuenta.
+              </Form.Text>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Nombre</Form.Label>
+              <Form.Control 
+                type="text" 
+                value={nombre} 
+                onChange={(e) => setNombre(e.target.value)}
+                disabled={!isEditing} 
+              />
+            </Form.Group>
+
+            {!isEditing ? (
+              <Button 
+                variant="primary" 
+                onClick={() => setIsEditing(true)}
+              >
+                Editar Perfil
+              </Button>
+            ) : (
+              <div className="d-flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    setIsEditing(false);
+                    setNombre(profileData?.nombre || '');
+                    setFotoPerfil(profileData?.foto_perfil || '');
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="success" 
+                  type="submit"
+                >
+                  Guardar Cambios
+                </Button>
+              </div>
+            )}
+          </Form>
         </Col>
       </Row>
     </Container>

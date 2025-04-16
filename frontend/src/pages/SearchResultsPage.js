@@ -5,7 +5,7 @@ import PostCard from '../components/PostCard';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
-import CategorySelector from '../components/CategorySelector';
+import { FaSearch, FaThList, FaThLarge } from 'react-icons/fa';
 
 const FilterSection = styled.div`
   background: white;

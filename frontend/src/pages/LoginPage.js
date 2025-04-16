@@ -1,50 +1,66 @@
-import React, { useState } from 'react';
-import { Form, Button, Container, Row, Col, Alert } from 'react-bootstrap';
+import React, { useState, useContext } from 'react';
+import { Container, Form, Button, Alert, Row, Col } from 'react-bootstrap';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { useUser } from '../context/UserContext';
+import { UserContext } from '../context/UserContext';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useContext(UserContext);
   const navigate = useNavigate();
-  const { login } = useUser(); // Usar la función login del contexto
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validar campos
+    
+    // Validación básica
     if (!email || !password) {
-      setError('Por favor, completa todos los campos.');
-      setSuccess(false);
+      setError('Por favor ingresa email y contraseña');
       return;
     }
 
+    setLoading(true);
+    setError('');
+    
     try {
-      // Enviar solicitud al backend
-      const response = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      console.log('Intentando iniciar sesión con:', { email });
+      
+      // Realizar solicitud de login
+      const response = await axios.post('/api/auth/login', {
+        email,
+        password
+      });
 
-      // Si el inicio de sesión es exitoso
-      setError(null);
-      setSuccess(true);
-
-      // Actualizar el estado del usuario en el contexto
-      login(response.data);
-
-      // Redirigir a la página principal
-      navigate('/home');
-    } catch (err) {
-      // Manejar errores del backend
-      if (err.response && err.response.status === 404) {
-        setError('Usuario no encontrado.');
-      } else if (err.response && err.response.status === 401) {
-        setError('Credenciales incorrectas. Inténtalo de nuevo.');
+      console.log('Respuesta de login:', response.data);
+      
+      // Verificar si recibimos un token y datos de usuario
+      if (response.data && response.data.token) {
+        // Guardar datos en el contexto
+        login(response.data);
+        
+        // Redirigir al usuario
+        navigate('/');
       } else {
-        setError('Ocurrió un error. Por favor, inténtalo más tarde.');
+        setError('Respuesta de servidor inválida');
       }
-      setSuccess(false);
+    } catch (err) {
+      console.error('Error en login:', err);
+      
+      if (err.response) {
+        // El servidor respondió con un código de estado de error
+        console.error('Datos de respuesta:', err.response.data);
+        setError(err.response.data.error || 'Credenciales inválidas');
+      } else if (err.request) {
+        // La solicitud se hizo pero no se recibió respuesta
+        setError('No se pudo conectar con el servidor');
+      } else {
+        // Error al configurar la solicitud
+        setError(`Error: ${err.message}`);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -52,36 +68,49 @@ const LoginPage = () => {
     <Container className="mt-5">
       <Row className="justify-content-md-center">
         <Col md={6}>
-          <h1 className="text-center mb-4">Inicio de Sesión</h1>
+          <div className="text-center mb-4">
+            <h1>Iniciar Sesión</h1>
+          </div>
 
-          {/* Mostrar mensajes de error o éxito */}
           {error && <Alert variant="danger">{error}</Alert>}
-          {success && <Alert variant="success">Inicio de sesión exitoso.</Alert>}
 
           <Form onSubmit={handleSubmit}>
-            <Form.Group controlId="formEmail" className="mb-3">
+            <Form.Group controlId="formBasicEmail" className="mb-3">
               <Form.Label>Email</Form.Label>
               <Form.Control
                 type="email"
                 placeholder="Ingresa tu email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </Form.Group>
 
-            <Form.Group controlId="formPassword" className="mb-3">
+            <Form.Group controlId="formBasicPassword" className="mb-3">
               <Form.Label>Contraseña</Form.Label>
               <Form.Control
                 type="password"
-                placeholder="Ingresa tu contraseña"
+                placeholder="Contraseña"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
               />
             </Form.Group>
 
-            <Button variant="primary" type="submit" className="w-100">
-              Iniciar Sesión
+            <Button 
+              variant="primary" 
+              type="submit" 
+              className="w-100" 
+              disabled={loading}
+            >
+              {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
+
+            <div className="text-center mt-3">
+              <p>
+                ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
+              </p>
+            </div>
           </Form>
         </Col>
       </Row>

@@ -1,81 +1,123 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useContext } from 'react';
+// Quitar Card de las importaciones si no se usa
+import { Container, Row, Col, Button, Badge, Spinner, Alert } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Button, Alert } from 'react-bootstrap';
+import axios from 'axios';
+import { UserContext } from '../context/UserContext';
+import { useCart } from '../context/CartContext';
 
 const PostDetailPage = () => {
+  const [post, setPost] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
-  const [post, setPost] = useState(null);
-  const [error, setError] = useState(null);
-  const [authorName, setAuthorName] = useState(''); // Inicializamos como cadena vacía
+  const { user } = useContext(UserContext);
+  const { addToCart } = useCart(); // Importamos la función para añadir al carrito
+  const [addedToCart, setAddedToCart] = useState(false); // Estado para mostrar mensaje de confirmación
 
   useEffect(() => {
-    // Obtener los detalles del post
-    axios.get(`/api/posts/${id}`)
-      .then(response => {
-        console.log('Datos recibidos del backend:', response.data); // Log para depuración
+    const fetchPost = async () => {
+      try {
+        const response = await axios.get(`/api/posts/${id}`);
         setPost(response.data);
-        setError(null);
+        setLoading(false);
+      } catch (err) {
+        setError('Error al cargar la publicación');
+        setLoading(false);
+      }
+    };
 
-        // Obtener el nombre del usuario asociado al usuario_id
-        return axios.get(`/api/users/${response.data.usuario_id}`);
-      })
-      .then(userResponse => {
-        console.log('Datos del usuario:', userResponse.data); // Log para depuración
-        setAuthorName(userResponse.data.nombre); // Asignar el nombre del usuario
-      })
-      .catch(error => {
-        console.error('Error al obtener el detalle del post o el usuario:', error);
-        setError('No se pudo cargar la información del producto.');
-      });
+    fetchPost();
   }, [id]);
+
+  // Función para añadir el producto al carrito
+  const handleAddToCart = () => {
+    if (post) {
+      const productToAdd = {
+        id: post.id,
+        title: post.titulo,
+        description: post.descripcion,
+        price: parseFloat(post.precio),
+        image: post.imagen,
+        quantity: 1
+      };
+      
+      addToCart(productToAdd);
+      setAddedToCart(true);
+      
+      // Ocultar el mensaje después de 3 segundos
+      setTimeout(() => {
+        setAddedToCart(false);
+      }, 3000);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Container className="text-center my-5">
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </Spinner>
+      </Container>
+    );
+  }
 
   if (error) {
     return (
-      <Container className="mt-5">
+      <Container className="my-5">
         <Alert variant="danger">{error}</Alert>
-        <Button variant="primary" onClick={() => navigate('/home')}>
-          Volver al Inicio
-        </Button>
       </Container>
     );
   }
 
   if (!post) {
     return (
-      <Container className="mt-5">
-        <p>Cargando información del producto...</p>
+      <Container className="my-5">
+        <Alert variant="warning">Publicación no encontrada</Alert>
       </Container>
     );
   }
 
   return (
-    <Container className="mt-5">
+    <Container className="my-5">
+      {addedToCart && (
+        <Alert variant="success" className="mb-3">
+          ¡Producto añadido al carrito con éxito!
+        </Alert>
+      )}
+      
       <Row>
-        {/* Imagen del producto */}
         <Col md={6}>
-          <img
-            src={post.imagen}
-            alt={post.titulo}
+          <img 
+            src={post.imagen} 
+            alt={post.titulo} 
             className="img-fluid rounded"
-            style={{ maxHeight: '400px', objectFit: 'cover' }}
+            style={{ maxHeight: '500px', objectFit: 'contain' }}
           />
         </Col>
-
-        {/* Detalles del producto */}
         <Col md={6}>
           <h1>{post.titulo}</h1>
-          <p><strong>Descripción:</strong> {post.descripcion}</p>
-          <p><strong>Categoría:</strong> {post.categoria || 'Sin categoría'}</p>
-          <p><strong>Precio:</strong> ${post.precio}</p>
-          <p><strong>Publicado por:</strong> {authorName || 'Usuario desconocido'}</p>
-          <p><strong>Fecha de publicación:</strong> {new Date(post.fecha_creacion).toLocaleDateString()}</p>
-
-          {/* Botón para regresar */}
-          <Button variant="primary" onClick={() => navigate('/home')} className="mt-3">
-            Volver al Inicio
-          </Button>
+          <Badge bg="secondary" className="mb-3">{post.categoria}</Badge>
+          <h3 className="text-success">${parseFloat(post.precio).toFixed(2)}</h3>
+          <p className="my-4">{post.descripcion}</p>
+          
+          <div className="d-grid gap-2">
+            <Button 
+              variant="primary" 
+              size="lg"
+              onClick={handleAddToCart}
+            >
+              🛒 Agregar al carrito
+            </Button>
+            
+            <Button 
+              variant="outline-secondary"
+              onClick={() => navigate(-1)}
+            >
+              ⬅️ Volver
+            </Button>
+          </div>
         </Col>
       </Row>
     </Container>

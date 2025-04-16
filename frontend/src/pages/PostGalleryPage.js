@@ -42,13 +42,15 @@ const PostsGalleryPage = () => {
       console.log('Sending favorite request:', {
         postId,
         type: typeof postId,
-        requestBody: { publicacion_id: Number(postId) }
+        userId: user.id,
+        tokenPresente: !!user.token
       });
 
       const response = await axios.post(
         '/api/favorites',
         {
           publicacion_id: Number(postId)
+          // No incluir usuario_id, lo obtendremos del token en el backend
         },
         {
           headers: {
@@ -59,7 +61,7 @@ const PostsGalleryPage = () => {
       );
 
       console.log('Favorite response:', response.data);
-      alert('Añadido a favoritos exitosamente');
+      alert(response.data.added ? 'Añadido a favoritos exitosamente' : 'Eliminado de favoritos exitosamente');
     } catch (error) {
       console.error('Error details:', {
         error,
