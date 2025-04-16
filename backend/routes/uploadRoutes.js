@@ -7,7 +7,10 @@ const { v4: uuidv4 } = require('uuid');
 const auth = require('../middleware/authMiddleware');
 
 // Crear el directorio de uploads si no existe
-const uploadDir = path.join(__dirname, '../uploads');
+const uploadDir = process.env.NODE_ENV === 'production'
+  ? path.join('/tmp/uploads') // Usar /tmp en producción (Render)
+  : path.join(__dirname, '../uploads');
+
 if (!fs.existsSync(uploadDir)) {
   console.log('Creando directorio de uploads:', uploadDir);
   fs.mkdirSync(uploadDir, { recursive: true });

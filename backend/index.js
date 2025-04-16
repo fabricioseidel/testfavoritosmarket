@@ -104,6 +104,13 @@ if (process.env.NODE_ENV === 'production') {
   app.use('/api/upload', uploadRoutes);
 }
 
-// Iniciar el servidor
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Importar y ejecutar migraciones
+const runMigrations = require('./db-migrate');
+
+// Migraciones y luego iniciar el servidor
+runMigrations().then(() => {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}).catch(err => {
+  console.error('Error al iniciar la aplicación:', err);
+});
