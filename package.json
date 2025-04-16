@@ -9,7 +9,7 @@
     "install-client": "cd frontend && npm install",
     "install-server": "cd backend && npm install",
     "install": "npm run install-server && npm run install-client",
-    "build": "cd frontend && DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false CI=false npm run build",
+    "build": "cd frontend && npm install @babel/plugin-proposal-private-property-in-object@7.21.11 --no-save && DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false CI=false npm run build",
     "start": "cd backend && node index.js",
     "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm start\""
   },
