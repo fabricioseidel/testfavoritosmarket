@@ -1,21 +1,47 @@
-import axiosInstance from '../axiosConfig';
+import axios from '../axiosConfig';
 
-// Usar la instancia configurada en lugar de crear una nueva
-const api = axiosInstance;
+// Funciones para interactuar con la API
 
-// Función de utilidad para depurar
-const testApiConnection = async () => {
-  try {
-    const response = await api.get('/');
-    console.log('Conexión API exitosa:', response.data);
-    return true;
-  } catch (error) {
-    console.error('Error al conectar con API:', error);
-    return false;
-  }
+// Autenticación
+export const loginUser = (credentials) => axios.post('/api/auth/login', credentials);
+export const registerUser = (userData) => axios.post('/api/auth/register', userData);
+
+// Posts
+export const getPosts = () => axios.get('/api/posts');
+export const getPostById = (id) => axios.get(`/api/posts/${id}`);
+export const createPost = (postData) => axios.post('/api/posts', postData);
+export const updatePost = (id, postData) => axios.put(`/api/posts/${id}`, postData);
+export const deletePost = (id) => axios.delete(`/api/posts/${id}`);
+
+// Perfil
+export const getProfile = () => axios.get('/api/profile');
+export const updateProfile = (profileData) => axios.put('/api/profile', profileData);
+
+// Categorías
+export const getCategories = () => axios.get('/api/categories');
+
+// Favoritos
+export const getFavorites = () => axios.get('/api/favorites');
+export const addToFavorites = (postId) => axios.post('/api/favorites', { postId });
+export const removeFromFavorites = (postId) => axios.delete(`/api/favorites/${postId}`);
+
+// Subida de archivos
+export const uploadImage = (formData) => {
+  return axios.post('/api/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
 };
 
-// Ejecutar prueba durante la inicialización
-testApiConnection();
-
-export default api;
+// Función para probar la conexión al backend
+export const testApiConnection = async () => {
+  try {
+    const response = await axios.get('/');
+    console.log('Conexión API exitosa:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error al conectar con la API:', error);
+    throw error;
+  }
+};
