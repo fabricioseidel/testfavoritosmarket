@@ -50,12 +50,12 @@ describe('API REST Tests', () => {
       });
 
     const res = await request(app)
-      .post('/api/posts/create')
+      .post('/api/posts/create-post') // Cambiar de '/api/posts/create' a '/api/posts/create-post'
       .set('Authorization', `Bearer ${loginRes.body.token}`)
       .send({
-        título: 'Publicación de prueba',
-        descripción: 'Descripción de prueba',
-        categoría: 'Categoría de prueba',
+        titulo: 'Publicación de prueba', // Cambiar "título" por "titulo" (sin acento)
+        descripcion: 'Descripción de prueba', // Cambiar "descripción" por "descripcion" (sin acento)
+        categoria_id: 1, // Cambiar "categoría" por "categoria_id" para coincidir con la impl.
         precio: 100,
         imagen: 'http://example.com/producto.jpg'
       });

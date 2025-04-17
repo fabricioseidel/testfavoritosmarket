@@ -20,10 +20,10 @@ export const updateProfile = (profileData) => axios.put('/api/profile', profileD
 // Categorías
 export const getCategories = () => axios.get('/api/categories');
 
-// Favoritos
-export const getFavorites = () => axios.get('/api/favorites');
-export const addToFavorites = (postId) => axios.post('/api/favorites', { postId });
-export const removeFromFavorites = (postId) => axios.delete(`/api/favorites/${postId}`);
+// Favoritos - corregido para coincidir con rutas del backend
+export const getFavorites = () => axios.get('/api/posts/favorites');
+export const toggleFavorite = (publicacion_id) => axios.post('/api/posts/favorite', { publicacion_id });
+export const checkFavorite = (id) => axios.get(`/api/posts/favorite/${id}`);
 
 // Subida de archivos
 export const uploadImage = (formData) => {
