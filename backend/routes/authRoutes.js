@@ -2,7 +2,10 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const jwt = require('jsonwebtoken');
-// Eliminamos la referencia a bcrypt que causa el error
+const bcrypt = require('bcryptjs'); // Importar bcryptjs correctamente
+
+// Añadir middleware de autenticación para rutas protegidas
+const authMiddleware = require('../middlewares/authMiddleware');
 
 // Ruta para registrar un nuevo usuario
 router.post('/register', async (req, res) => {
@@ -100,48 +103,15 @@ router.post('/login', async (req, res) => {
 });
 
 // Ruta para obtener perfil del usuario
-router.get('/profile', async (req, res) => {
+router.get('/profile', authMiddleware, async (req, res) => {
   try {
-    // Verificar si hay un header de autorización
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('Acceso no autorizado: No se encontró Bearer token');
-      return res.status(401).json({ error: 'Acceso no autorizado, token no proporcionado' });
-    }
-
-    // Extraer el token del header
-    const token = authHeader.split(' ')[1];
-    
-    if (!token) {
-      console.log('Token no proporcionado o inválido');
-      return res.status(401).json({ error: 'Token no proporcionado' });
-    }
-
-    try {
-      // Verificar el token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'tu_clave_secreta_aqui');
-      
-      console.log(`Token decodificado para usuario ID: ${decoded.userId}`);
-      
-      // Buscar al usuario en la base de datos
-      const result = await pool.query('SELECT id, nombre, email, foto_perfil FROM usuarios WHERE id = $1', [decoded.userId]);
-      
-      if (result.rows.length === 0) {
-        console.log(`Usuario no encontrado en la base de datos: ID ${decoded.userId}`);
-        return res.status(404).json({ error: 'Usuario no encontrado' });
-      }
-      
-      // Devolver los datos del perfil
-      res.json(result.rows[0]);
-      
-    } catch (error) {
-      console.log(`Error al verificar token: ${error.message}`);
-      if (error.name === 'TokenExpiredError') {
-        return res.status(401).json({ error: 'Token expirado, por favor inicia sesión nuevamente' });
-      }
-      return res.status(401).json({ error: 'Token no válido' });
-    }
+    // Simplificar ya que req.user se asigna en el middleware
+    res.json({
+      id: req.user.id,
+      nombre: req.user.nombre,
+      email: req.user.email,
+      foto_perfil: req.user.foto_perfil || ''
+    });
   } catch (err) {
     console.error('Error al obtener perfil:', err);
     res.status(500).json({ error: 'Error interno del servidor' });

@@ -11,15 +11,9 @@ exports.toggleFavorite = async (req, res) => {
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
     
-    // CRÍTICO: Verificar explícitamente que req.user.id está disponible
-    if (req.user.id === undefined || req.user.id === null) {
-      console.error('⭐ toggleFavorite - req.user.id no está definido');
-      return res.status(400).json({ error: 'ID de usuario no disponible' });
-    }
-    
-    // Obtener datos para la operación
-    const usuario_id = Number(req.user.id); // Forzar tipo numérico
-    const { publicacion_id } = req.body;
+    // Obtener datos para la operación con conversión de tipo segura
+    const usuario_id = parseInt(req.user.id, 10); // Conversión segura a entero
+    const publicacion_id = parseInt(req.body.publicacion_id, 10);
     
     console.log('⭐ toggleFavorite - Datos:', { 
       usuario_id, 
@@ -27,10 +21,13 @@ exports.toggleFavorite = async (req, res) => {
       user_object: JSON.stringify(req.user)
     });
     
-    // Validación de datos
-    if (!publicacion_id) {
-      console.error('⭐ toggleFavorite - publicacion_id faltante');
-      return res.status(400).json({ error: 'ID de publicación requerido' });
+    // Validación de datos completa
+    if (isNaN(usuario_id)) {
+      return res.status(400).json({ error: 'ID de usuario inválido' });
+    }
+    
+    if (!publicacion_id || isNaN(publicacion_id)) {
+      return res.status(400).json({ error: 'ID de publicación requerido y debe ser un número' });
     }
     
     // Interacción atómica con la base de datos en un bloque try-catch específico
@@ -60,7 +57,7 @@ exports.toggleFavorite = async (req, res) => {
         // CRÍTICO: Asegurar tipos de datos correctos
         const result = await pool.query(
           'INSERT INTO favoritos (usuario_id, publicacion_id) VALUES ($1, $2) RETURNING id',
-          [usuario_id, Number(publicacion_id)]
+          [usuario_id, publicacion_id]
         );
         
         console.log(`⭐ toggleFavorite - Favorito añadido ID: ${result.rows[0].id}`);
