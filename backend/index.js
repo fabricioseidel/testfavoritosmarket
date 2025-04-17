@@ -6,13 +6,13 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 const pool = require('./db'); // Importar el archivo db.js
-const favoriteRoutes = require('./routes/favoriteRoutes'); // Nombre estandarizado
-const categoryRoutes = require('./routes/categoryRoutes'); // Importar las rutas de categorías
-const authRoutes = require('./routes/authRoutes'); // Importar las rutas de autenticación
-const userRoutes = require('./routes/userRoutes'); // Importar las rutas de usuarios
-const postRoutes = require('./routes/postRoutes'); // Importar las rutas de publicaciones
-const profileRoutes = require('./routes/profileRoutes'); // Importar las rutas de perfil
-const uploadRoutes = require('./routes/uploadRoutes'); // Importar las rutas de cargas
+const favoriteRoutes = require('./routes/favoriteRoutes'); 
+const categoryRoutes = require('./routes/categoryRoutes');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const postRoutes = require('./routes/postRoutes');
+const profileRoutes = require('./routes/profileRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 // Verificar si JWT_SECRET está configurado
 if (!process.env.JWT_SECRET) {
@@ -23,7 +23,7 @@ if (!process.env.JWT_SECRET) {
 // Middlewares
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://favoritosmarket.netlify.app', 'https://favoritosmarket-api.onrender.com'] 
+    ? ['https://favoritosmarket.netlify.app', 'https://comforting-halva-178cd0.netlify.app', 'https://68003db3ab4b0f271783a345--comforting-halva-178cd0.netlify.app'] 
     : 'http://localhost:3000',
   credentials: true
 }));
@@ -57,8 +57,8 @@ pool.query('SELECT NOW()', (err, res) => {
   }
 });
 
-// Asegurarse de que la ruta de archivos estáticos tiene los permisos correctos
-const uploadPath = path.join(__dirname, 'public/uploads');
+// Crear directorio para uploads si no existe
+const uploadPath = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadPath)) {
   fs.mkdirSync(uploadPath, { recursive: true });
   console.log(`Directorio de uploads creado en: ${uploadPath}`);
@@ -69,45 +69,44 @@ app.use('/uploads', (req, res, next) => {
   // Añadir cache control para imágenes
   res.setHeader('Cache-Control', 'public, max-age=3600');
   next();
-}, express.static(path.join(__dirname, 'public/uploads')));
+}, express.static(path.join(__dirname, 'uploads')));
 
-// Rutas de la API
+// ===================== RUTAS DE LA API =====================
+// Configurar todas las rutas de la API
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/favorites', favoriteRoutes); // Usando el nombre correcto
+app.use('/api/favorites', favoriteRoutes);
 app.use('/api/categories', categoryRoutes);
-app.use('/api/upload', uploadRoutes); // Nueva ruta para cargas
+app.use('/api/upload', uploadRoutes);
 
-// Middleware para servir el frontend desde build en producción
-if (process.env.NODE_ENV === 'production') {
-  // Prioridad a las rutas de la API
-  app.use('/api/auth', authRoutes);
-  app.use('/api/users', userRoutes);
-  app.use('/api/posts', postRoutes);
-  app.use('/api/profile', profileRoutes);
-  app.use('/api/favorites', favoriteRoutes);
-  app.use('/api/categories', categoryRoutes);
-  app.use('/api/upload', uploadRoutes);
-
-  // Servir archivos estáticos desde la carpeta build
-  app.use(express.static(path.join(__dirname, '../frontend/build')));
-  
-  // Todas las demás solicitudes GET no manejadas se envían a la aplicación React
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
+// ===================== MANEJO DE RUTAS PRINCIPALES =====================
+// Ruta raíz - devolver información sobre la API
+app.get('/', (req, res) => {
+  res.json({
+    message: 'FavoritosMarket API - La interfaz de usuario está disponible en Netlify',
+    frontend_url: 'https://favoritosmarket.netlify.app',
+    api_version: '1.0.0',
+    endpoints: [
+      '/api/auth', 
+      '/api/users', 
+      '/api/posts',
+      '/api/profile', 
+      '/api/favorites', 
+      '/api/categories'
+    ]
   });
-} else {
-  // En desarrollo, solo configuramos las rutas de la API
-  app.use('/api/auth', authRoutes);
-  app.use('/api/users', userRoutes);
-  app.use('/api/posts', postRoutes);
-  app.use('/api/profile', profileRoutes);
-  app.use('/api/favorites', favoriteRoutes);
-  app.use('/api/categories', categoryRoutes);
-  app.use('/api/upload', uploadRoutes);
-}
+});
+
+// Capturar todas las demás rutas no manejadas
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Ruta no encontrada',
+    message: 'La ruta solicitada no existe en esta API',
+    suggestion: 'Visita la ruta principal / para más información'
+  });
+});
 
 // Importar y ejecutar migraciones
 const runMigrations = require('./db-migrate');
