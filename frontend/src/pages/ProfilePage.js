@@ -56,15 +56,18 @@ const ProfilePage = () => {
     }
   };
 
-  // Cargar datos al montar el componente
+  // Cargar datos al montar o si cambia el ID del usuario
   useEffect(() => {
-    if (user) { // Solo cargar si hay un usuario en el contexto
+    if (user?.id) { // Verificar que user y user.id existan
+      console.log(`ProfilePage useEffect: Cargando datos para user ID: ${user.id}`);
       loadProfileData();
     } else {
-      setLoading(false); // Si no hay usuario, no hay nada que cargar
+      console.log('ProfilePage useEffect: No hay user.id, estableciendo error.');
+      setLoading(false);
       setError('Debes iniciar sesión para ver tu perfil.');
     }
-  }, [user]); // Depender solo de 'user'
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // Depender solo de user.id
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
