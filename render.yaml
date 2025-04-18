@@ -1,13 +1,7 @@
 # Render Blueprint for Node.js Backend + PostgreSQL
 
 services:
-  # PostgreSQL Database Service
-  - type: pserv
-    name: postgres-db-market # Nombre para el servicio de BD en Render
-    plan: free # O elige un plan de pago
-    # Render injecta automáticamente DATABASE_URL en los servicios conectados
-
-  # Node.js Backend Service
+  # Node.js Backend Service (Definido primero)
   - type: web # Indica que es un servicio web
     name: node-backend-market # Nombre para el servicio backend en Render
     env: node # Especifica el entorno de ejecución
@@ -17,6 +11,7 @@ services:
     startCommand: npm start # Comando para iniciar el servidor (usa el script 'start' de package.json)
     healthCheckPath: / # Ruta para que Render verifique si el servicio está activo
     envVars:
+      # DATABASE_URL será inyectada automáticamente por Render al detectar el pserv
       - key: NODE_ENV
         value: production # Establece el entorno a producción
       - key: JWT_SECRET
@@ -27,3 +22,9 @@ services:
       # Añade otras variables de entorno que necesite tu backend
       # - key: OTRA_VARIABLE
       #   value: su_valor
+
+  # PostgreSQL Database Service (Definido después)
+  - type: pserv
+    name: postgres-db-market # Nombre para el servicio de BD en Render
+    plan: free # O elige un plan de pago
+    # Render injecta automáticamente DATABASE_URL en los servicios conectados
