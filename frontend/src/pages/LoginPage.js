@@ -1,8 +1,8 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Container, Form, Button, Alert, Row, Col } from 'react-bootstrap';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
 import { UserContext } from '../context/UserContext';
+import { authService } from '../services/apiClient'; // Importar authService
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -36,8 +36,8 @@ const LoginPage = () => {
     try {
       console.log('Intentando iniciar sesión con:', { email });
       
-      // Realizar solicitud de login
-      const response = await axios.post('/api/auth/login', {
+      // Realizar solicitud de login usando authService
+      const response = await authService.login({
         email,
         password
       });
@@ -60,13 +60,13 @@ const LoginPage = () => {
       if (err.response) {
         // El servidor respondió con un código de estado de error
         console.error('Datos de respuesta:', err.response.data);
-        setError(err.response.data.error || 'Credenciales inválidas');
+        setError(err.response.data.error || 'Credenciales inválidas o error del servidor');
       } else if (err.request) {
         // La solicitud se hizo pero no se recibió respuesta
-        setError('No se pudo conectar con el servidor');
+        setError('No se pudo conectar con el servidor. Verifica tu conexión.');
       } else {
         // Error al configurar la solicitud
-        setError(`Error: ${err.message}`);
+        setError(`Error inesperado: ${err.message}`);
       }
     } finally {
       setLoading(false);

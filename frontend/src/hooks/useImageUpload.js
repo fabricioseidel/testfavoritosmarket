@@ -1,78 +1,53 @@
-import { useCallback, useContext } from 'react';
-import { UserContext } from '../context/UserContext';
-import { uploadService } from '../services/apiClient';
+import { useState } from 'react';
+import { uploadService } from '../services/apiClient'; // Importar uploadService
 
 /**
- * Hook personalizado para gestionar la carga de imágenes
- * @param {Function} onImageUrlReceived - Callback que se ejecuta al recibir la URL de la imagen
- * @param {boolean} isRegistration - Si es para registro de usuario (no requiere autenticación)
- * @returns {Function} - Función para subir la imagen
+ * Hook para manejar la subida de imágenes.
+ * @param {Function} onUploadSuccess - Callback a ejecutar cuando la subida es exitosa. Recibe la URL de la imagen.
+ * @param {boolean} isRegistration - Indica si la subida es para registro (sin autenticación necesaria en la llamada).
+ * @returns {Function} Función para manejar la subida del archivo.
  */
-export const useImageUpload = (onImageUrlReceived, isRegistration = false) => {
-  const { user } = useContext(UserContext);
-  
-  /**
-   * Sube una imagen al servidor
-   * @param {File} file - Archivo de imagen a subir
-   * @param {Function} setLoading - Función para establecer estado de carga
-   * @param {Function} setError - Función para establecer mensaje de error
-   * @param {Function} setProgress - Función para actualizar progreso
-   * @param {Function} setPreview - Función para actualizar vista previa
-   */
-  const uploadImage = useCallback(async (file, setLoading, setError, setProgress, setPreview) => {
-    if (!file) {
-      setError('Por favor selecciona una imagen');
-      return;
-    }
-    
-    // Validar autenticación para imágenes que no son de registro
-    if (!isRegistration && (!user || !user.token)) {
-      setError('Debes iniciar sesión para subir imágenes');
-      return;
-    }
-    
-    setLoading(true);
-    setError('');
+export const useImageUpload = (onUploadSuccess, isRegistration = false) => {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const [progress, setProgress] = useState(0);
+
+  const handleUpload = async (file) => {
+    if (!file) return;
+
+    setUploading(true);
+    setError(null);
     setProgress(0);
-    
+
     const formData = new FormData();
-    formData.append('image', file);
-    
+    formData.append('image', file); // Asegúrate que el backend espera 'image'
+
     try {
-      // Usar el servicio apropiado según el contexto
-      const uploadFn = isRegistration
-        ? uploadService.uploadRegistrationImage
-        : uploadService.uploadImage;
-        
-      const response = await uploadFn(formData, (progress) => {
-        setProgress(progress);
-      });
-      
-      if (response.data && response.data.fileUrl) {
-        // Llamar al callback con la URL de la imagen y actualizar vista previa
-        onImageUrlReceived(response.data.fileUrl);
-        setPreview(response.data.fileUrl);
+      let response;
+      const onProgress = (percent) => setProgress(percent);
+
+      if (isRegistration) {
+        // Usar la función específica para registro
+        response = await uploadService.uploadRegistrationImage(formData, onProgress);
       } else {
-        throw new Error('No se recibió URL de imagen del servidor');
+        // Usar la función estándar para subida de imágenes (requiere auth)
+        response = await uploadService.uploadImage(formData, onProgress);
+      }
+
+      if (response.data && response.data.imageUrl) {
+        onUploadSuccess(response.data.imageUrl); // Llamar al callback con la URL
+      } else {
+        throw new Error('Respuesta inválida del servidor de subida');
       }
     } catch (err) {
       console.error('Error al subir imagen:', err);
-      
-      if (err.response) {
-        if (err.response.status === 401) {
-          setError('Tu sesión ha expirado o no es válida. Intenta iniciar sesión nuevamente.');
-        } else {
-          setError(`Error: ${err.response.data?.error || 'Hubo un problema al subir la imagen'}`);
-        }
-      } else if (err.request) {
-        setError('No se pudo conectar con el servidor. Verifica tu conexión.');
-      } else {
-        setError(`Error: ${err.message}`);
-      }
+      setError(err.response?.data?.error || err.message || 'Error al subir la imagen');
     } finally {
-      setLoading(false);
+      setUploading(false);
+      setProgress(100); // Marcar como completado (o resetear a 0)
     }
-  }, [user, isRegistration, onImageUrlReceived]);
-  
-  return uploadImage;
+  };
+
+  // Podrías devolver más estado si es necesario (uploading, error, progress)
+  return handleUpload;
 };

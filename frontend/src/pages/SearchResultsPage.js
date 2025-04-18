@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Alert, Button, Form, ButtonGroup } from 'react-bootstrap'; // Eliminar Spinner
+import { Container, Row, Col, Alert, Button, Form, ButtonGroup, Spinner } from 'react-bootstrap'; // Añadir Spinner
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import PostCard from '../components/PostCard';
-import axios from 'axios';
+import { searchPosts } from '../services/api'; // Importar función de búsqueda
+import apiClient from '../services/apiClient'; // Importar apiClient para AbortController
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import { FaSearch, FaThList, FaThLarge } from 'react-icons/fa';
@@ -22,247 +23,124 @@ const ResultCount = styled.p`
 `;
 
 const SearchResultsPage = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [viewMode, setViewMode] = useState('grid');
-  const [sortBy, setSortBy] = useState('recent');
-  const [priceRange, setPriceRange] = useState({ min: '', max: '' });
-  const [categoryId, setCategoryId] = useState('');
-  const [categories, setCategories] = useState([]);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+
   const query = searchParams.get('q');
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
-
   useEffect(() => {
-    // Cargar categorías
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get('/api/categories');
-        setCategories(response.data);
-      } catch (err) {
-        console.error('Error al cargar categorías:', err);
-      }
-    };
+    // Actualizar searchTerm si cambia el parámetro q en la URL
+    setSearchTerm(query || '');
 
-    fetchCategories();
-  }, []);
+    if (!query) {
+      setResults([]);
+      setLoading(false);
+      setError('Por favor ingresa un término de búsqueda.');
+      return;
+    }
 
-  useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     const fetchResults = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        const response = await axios.get(`/api/posts/search?q=${encodeURIComponent(query)}`);
-        let sortedResults = [...response.data];
+        const response = await apiClient.get(`/posts/search?q=${encodeURIComponent(query)}`, { signal });
 
-        // Aplicar ordenamiento
-        switch(sortBy) {
-          case 'price_asc':
-            sortedResults.sort((a, b) => a.precio - b.precio);
-            break;
-          case 'price_desc':
-            sortedResults.sort((a, b) => b.precio - a.precio);
-            break;
-          case 'recent':
-            sortedResults.sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
-            break;
-          default:
-            // Caso por defecto: ordenar por fecha más reciente
-            sortedResults.sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
-            break;
+        if (Array.isArray(response.data)) {
+          setResults(response.data);
+        } else {
+          console.error('API search did not return an array:', response.data);
+          setError('Formato de respuesta inesperado del servidor.');
+          setResults([]);
         }
-
-        // Aplicar filtros de precio
-        if (priceRange.min || priceRange.max) {
-          sortedResults = sortedResults.filter(item => {
-            const price = Number(item.precio);
-            return (!priceRange.min || price >= Number(priceRange.min)) &&
-                   (!priceRange.max || price <= Number(priceRange.max));
-          });
-        }
-
-        // Aplicar filtro de categoría
-        if (categoryId) {
-          sortedResults = sortedResults.filter(item => item.categoria_id === parseInt(categoryId));
-        }
-
-        setResults(sortedResults);
       } catch (err) {
-        setError('Error al buscar publicaciones');
+        if (err.name === 'AbortError') {
+          console.log('Búsqueda cancelada');
+        } else {
+          console.error('Error fetching search results:', err);
+          setError(err.response?.data?.error || err.message || 'Error al realizar la búsqueda.');
+          setResults([]);
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    if (query) {
-      fetchResults();
-    }
-  }, [query, sortBy, priceRange, categoryId]);
+    fetchResults();
 
-  // Calcular páginas
-  const totalPages = Math.ceil(results.length / itemsPerPage);
-  const currentResults = results.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+    return () => {
+      controller.abort();
+    };
+  }, [query]);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      setSearchParams({ q: searchTerm });
     }
   };
 
   return (
-    <Container className="mt-4">
-      <h2 className="mb-4">Resultados para "{query}"</h2>
-      
-      <FilterSection>
-        <Row className="align-items-center">
-          <Col md={3}>
-            <Form.Select 
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="mb-2"
-            >
-              <option value="recent">Más recientes</option>
-              <option value="price_asc">Precio: Menor a Mayor</option>
-              <option value="price_desc">Precio: Mayor a Menor</option>
-            </Form.Select>
-          </Col>
-          <Col md={3}>
-            <Form.Select 
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="mb-2"
-            >
-              <option value="">Todas las categorías</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-              ))}
-            </Form.Select>
-          </Col>
-          <Col md={4}>
-            <Row>
-              <Col>
-                <Form.Control
-                  type="number"
-                  placeholder="Precio min"
-                  value={priceRange.min}
-                  onChange={(e) => setPriceRange({...priceRange, min: e.target.value})}
-                  className="mb-2"
-                />
-              </Col>
-              <Col>
-                <Form.Control
-                  type="number"
-                  placeholder="Precio max"
-                  value={priceRange.max}
-                  onChange={(e) => setPriceRange({...priceRange, max: e.target.value})}
-                  className="mb-2"
-                />
-              </Col>
-            </Row>
-          </Col>
-          <Col md={2}>
-            <ButtonGroup className="w-100">
-              <Button 
-                variant={viewMode === 'grid' ? 'primary' : 'outline-primary'}
-                onClick={() => setViewMode('grid')}
-              >
-                <i className="bi bi-grid"></i>
-              </Button>
-              <Button 
-                variant={viewMode === 'list' ? 'primary' : 'outline-primary'}
-                onClick={() => setViewMode('list')}
-              >
-                <i className="bi bi-list"></i>
-              </Button>
+    <Container className="my-5">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+        <h1>Resultados de Búsqueda para "{query}"</h1>
+
+        <FilterSection>
+          <Form onSubmit={handleSearchSubmit} className="d-flex mb-3">
+            <Form.Control
+              type="search"
+              placeholder="Buscar nuevamente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="me-2"
+            />
+            <Button variant="primary" type="submit"><FaSearch /></Button>
+          </Form>
+          <div className="d-flex justify-content-between align-items-center">
+            <ResultCount>{results.length} resultado(s) encontrado(s)</ResultCount>
+            <ButtonGroup>
+              <Button variant={viewMode === 'grid' ? 'primary' : 'outline-secondary'} onClick={() => setViewMode('grid')}><FaThLarge /></Button>
+              <Button variant={viewMode === 'list' ? 'primary' : 'outline-secondary'} onClick={() => setViewMode('list')}><FaThList /></Button>
             </ButtonGroup>
-          </Col>
-        </Row>
-      </FilterSection>
+          </div>
+        </FilterSection>
 
-      <ResultCount>
-        {results.length} resultados encontrados
-      </ResultCount>
-
-      {loading ? (
-        <Row>
-          {[...Array(4)].map((_, i) => (
-            <Col key={i} xs={12} sm={6} md={4} lg={3}>
-              <div className="placeholder-glow">
-                <div className="placeholder" style={{height: '200px'}}></div>
-              </div>
-            </Col>
-          ))}
-        </Row>
-      ) : error ? (
-        <Alert variant="danger">{error}</Alert>
-      ) : (
-        <>
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <Row>
-              {currentResults.map(post => (
-                <Col 
-                  key={post.id} 
-                  xs={12} 
-                  sm={viewMode === 'grid' ? 6 : 12} 
-                  md={viewMode === 'grid' ? 4 : 12} 
-                  lg={viewMode === 'grid' ? 3 : 12}
-                >
-                  <motion.div variants={itemVariants}>
-                    <PostCard
-                      id={post.id}
-                      title={post.titulo}
-                      description={post.descripcion}
-                      price={Number(post.precio)}
-                      image={post.imagen}
-                      onClick={() => navigate(`/post/${post.id}`)}
-                      viewMode={viewMode}
-                    />
-                  </motion.div>
-                </Col>
-              ))}
-            </Row>
-          </motion.div>
-
-          {/* Paginación */}
-          {totalPages > 1 && (
-            <div className="d-flex justify-content-center mt-4">
-              <ButtonGroup>
-                {[...Array(totalPages)].map((_, i) => (
-                  <Button
-                    key={i + 1}
-                    variant={currentPage === i + 1 ? 'primary' : 'outline-primary'}
-                    onClick={() => setCurrentPage(i + 1)}
-                  >
-                    {i + 1}
-                  </Button>
-                ))}
-              </ButtonGroup>
-            </div>
-          )}
-        </>
-      )}
+        {loading ? (
+          <div className="text-center"><Spinner animation="border" /></div>
+        ) : error ? (
+          <Alert variant="danger">{error}</Alert>
+        ) : results.length === 0 ? (
+          <Alert variant="info">No se encontraron publicaciones que coincidan con tu búsqueda.</Alert>
+        ) : (
+          <Row className={viewMode === 'grid' ? '' : 'flex-column'}>
+            {results.map(post => (
+              <Col
+                key={post.id}
+                xs={12}
+                sm={viewMode === 'grid' ? 6 : 12}
+                md={viewMode === 'grid' ? 4 : 12}
+                lg={viewMode === 'grid' ? 3 : 12}
+                className="mb-4"
+              >
+                <PostCard
+                  id={post.id}
+                  title={post.titulo}
+                  description={post.descripcion}
+                  price={parseFloat(post.precio)}
+                  image={post.imagen}
+                />
+              </Col>
+            ))}
+          </Row>
+        )}
+      </motion.div>
     </Container>
   );
 };

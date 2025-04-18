@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Container, Row, Col, Form, Button, Image, Alert } from 'react-bootstrap';
 import { UserContext } from '../context/UserContext';
-import axios from 'axios';
+import { authService } from '../services/apiClient'; // Importar authService
 import ImageUploader from '../components/ImageUploader';
 
 const ProfilePage = () => {
@@ -26,22 +26,19 @@ const ProfilePage = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Verificar si tenemos token antes de hacer la petición
-      if (!user?.token) {
+
+      // Verificar si tenemos usuario en contexto (el interceptor añade el token)
+      if (!user) {
         setError('No hay sesión activa. Por favor, inicia sesión nuevamente.');
         setLoading(false);
         return;
       }
-      
-      console.log('Cargando perfil con token:', user.token.substring(0, 15) + '...');
-      
-      const response = await axios.get('/api/auth/profile', {
-        headers: {
-          Authorization: `Bearer ${user.token}`
-        }
-      });
-      
+
+      console.log('Cargando perfil para usuario ID:', user.id);
+
+      // Usar authService.getProfile
+      const response = await authService.getProfile();
+
       // Verificar respuesta y formatear datos
       if (response.data) {
         console.log('Datos de perfil recibidos:', response.data);
@@ -53,21 +50,7 @@ const ProfilePage = () => {
       }
     } catch (err) {
       console.error('Error al cargar datos del perfil:', err);
-      
-      // Mostrar mensaje específico según el tipo de error
-      if (err.response) {
-        if (err.response.status === 401) {
-          setError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-          // Considerar cerrar sesión automáticamente
-          // logout();
-        } else {
-          setError(`Error del servidor: ${err.response.data?.error || 'Algo salió mal'}`);
-        }
-      } else if (err.request) {
-        setError('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
-      } else {
-        setError(`Error: ${err.message}`);
-      }
+      setError(err.response?.data?.error || err.message || 'Error al cargar el perfil');
     } finally {
       setLoading(false);
     }
@@ -75,14 +58,20 @@ const ProfilePage = () => {
 
   // Cargar datos al montar el componente
   useEffect(() => {
-    loadProfileData();
-  }, [user?.token]); // Eliminado loadProfileData como dependencia
+    if (user) { // Solo cargar si hay un usuario en el contexto
+      loadProfileData();
+    } else {
+      setLoading(false); // Si no hay usuario, no hay nada que cargar
+      setError('Debes iniciar sesión para ver tu perfil.');
+    }
+  }, [user]); // Depender solo de 'user'
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    
+
     try {
-      if (!user?.token) {
+      // El interceptor ya añade el token si el usuario está logueado
+      if (!user) {
         setError('Debes iniciar sesión para actualizar tu perfil');
         return;
       }
@@ -92,28 +81,19 @@ const ProfilePage = () => {
         foto_perfil: fotoPerfil
       };
 
-      // Renombrada 'response' a 'updateResponse' para usar la variable
-      const updateResponse = await axios.put('/api/auth/profile', updateData, {
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Usar authService.updateProfile
+      const updateResponse = await authService.updateProfile(updateData);
 
       console.log('Perfil actualizado:', updateResponse.data);
 
-      // Actualizar datos locales
-      setProfileData({
-        ...profileData,
-        ...updateData
-      });
-
-      // Actualizar contexto del usuario
-      login({
-        ...user,
-        nombre,
-        foto_perfil: fotoPerfil
-      });
+      // Actualizar datos locales y contexto
+      const updatedUserData = {
+        ...user, // Mantener id, email, token
+        nombre: updateResponse.data.nombre,
+        foto_perfil: updateResponse.data.foto_perfil
+      };
+      setProfileData(updatedUserData); // Actualizar estado local si aún se usa
+      login(updatedUserData); // Actualizar contexto (esto también actualiza localStorage)
 
       setSuccess(true);
       setIsEditing(false);
@@ -124,7 +104,7 @@ const ProfilePage = () => {
       }, 3000);
     } catch (err) {
       console.error('Error al actualizar perfil:', err);
-      setError('No se pudo actualizar el perfil. Intenta de nuevo más tarde.');
+      setError(err.response?.data?.error || err.message || 'No se pudo actualizar el perfil.');
     }
   };
 

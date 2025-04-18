@@ -5,7 +5,7 @@ import { Button, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 import { useCart } from '../context/CartContext';
-import axios from 'axios';
+import { favoriteService, postService } from '../services/apiClient';
 
 const StyledCard = styled.div`
   border: 1px solid #ddd;
@@ -59,23 +59,19 @@ const PostCard = ({ id, title, price, description, image, onFavorite, onClaim })
   useEffect(() => {
     if (!user) return;
 
-    const checkFavorite = async () => {
+    const checkFavoriteStatus = async () => {
       try {
-        const response = await axios.get(`/api/favorites/check/${id}`, {
-          headers: {
-            Authorization: `Bearer ${user.token}`
-          }
-        });
+        const response = await favoriteService.checkFavorite(id);
         setIsFavorite(response.data.isFavorite);
       } catch (error) {
-        console.error('Error al verificar favorito:', error);
+        console.error('Error al verificar favorito:', error.response?.data?.error || error.message);
       }
     };
 
-    checkFavorite();
+    checkFavoriteStatus();
   }, [id, user]);
 
-  const toggleFavorite = async (e) => {
+  const toggleFavoriteHandler = async (e) => {
     e.stopPropagation();
     
     if (!user?.token) {
@@ -84,29 +80,19 @@ const PostCard = ({ id, title, price, description, image, onFavorite, onClaim })
     }
 
     try {
-      const claimResponse = await axios.post(
-        '/api/favorites',
-        { publicacion_id: id },
-        {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      setIsFavorite(!isFavorite);
+      const response = await favoriteService.toggleFavorite(id);
+      setIsFavorite(response.data.isFavorite);
       
       if (onFavorite) {
-        onFavorite(id, !isFavorite);
+        onFavorite(id, response.data.isFavorite);
       }
     } catch (error) {
-      console.error('Error al gestionar favorito:', error);
+      console.error('Error al gestionar favorito:', error.response?.data?.error || error.message);
       alert('Error al gestionar favorito');
     }
   };
 
-  const handleClaim = async (e) => {
+  const handleClaimHandler = async (e) => {
     e.stopPropagation();
 
     if (!user?.token) {
@@ -115,12 +101,7 @@ const PostCard = ({ id, title, price, description, image, onFavorite, onClaim })
     }
 
     try {
-      const claimResponse = await axios.put(`/api/posts/claim/${id}`, {}, {
-        headers: { 
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const claimResponse = await postService.claimPost(id);
       
       console.log('Publicación reclamada:', claimResponse.data);
       
@@ -130,7 +111,7 @@ const PostCard = ({ id, title, price, description, image, onFavorite, onClaim })
         onClaim(id);
       }
     } catch (error) {
-      console.error('Error al reclamar publicación:', error.response?.data || error);
+      console.error('Error al reclamar publicación:', error.response?.data || error.message);
       alert(error.response?.data?.error || 'Error al reclamar la publicación');
     }
   };
@@ -212,7 +193,7 @@ const PostCard = ({ id, title, price, description, image, onFavorite, onClaim })
         {user && (
           <Button
             variant={isFavorite ? "warning" : "outline-warning"}
-            onClick={toggleFavorite}
+            onClick={toggleFavoriteHandler}
             className={isFavorite ? "favorite-active" : ""}
           >
             {isFavorite ? '💖 Favorito' : '🤍 Favorito'}
@@ -222,7 +203,7 @@ const PostCard = ({ id, title, price, description, image, onFavorite, onClaim })
         {onClaim && user && (
           <Button 
             variant="outline-success"
-            onClick={handleClaim}
+            onClick={handleClaimHandler}
           >
             ✋ Reclamar
           </Button>

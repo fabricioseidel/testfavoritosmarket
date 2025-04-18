@@ -4,28 +4,23 @@ import { useImageUpload } from '../hooks/useImageUpload';
 import BaseImageUploader from './BaseImageUploader';
 
 /**
- * Componente para subir imágenes con autenticación
+ * Componente para subir imágenes (requiere autenticación por defecto).
  * @param {Object} props - Propiedades del componente
  * @param {Function} props.onImageUploaded - Función a llamar cuando se sube una imagen
  * @param {string} props.initialImage - URL de imagen inicial para mostrar
- * @param {string} props.label - Etiqueta del campo
- * @param {boolean} props.required - Si el campo es obligatorio
+ * @param {string} props.label - Etiqueta para el input
  */
-const ImageUploader = ({ 
-  onImageUploaded, 
-  initialImage = '',
-  label = 'Imagen',
-  required = false
-}) => {
-  // Usamos nuestro hook personalizado
+const ImageUploader = ({ onImageUploaded, initialImage = '', label = "Subir Imagen" }) => {
+  // Usar el hook useImageUpload (isRegistration = false por defecto)
   const uploadImage = useImageUpload(onImageUploaded, false);
-  
+
   return (
     <BaseImageUploader
-      onFileUpload={uploadImage}
+      onFileUpload={uploadImage} // Pasar la función del hook
       initialImage={initialImage}
       label={label}
-      required={required}
+      required={false} // O según sea necesario
+      // Pasar estado de carga/error/progreso si BaseImageUploader lo soporta
     />
   );
 };
@@ -33,8 +28,7 @@ const ImageUploader = ({
 ImageUploader.propTypes = {
   onImageUploaded: PropTypes.func.isRequired,
   initialImage: PropTypes.string,
-  label: PropTypes.string,
-  required: PropTypes.bool
+  label: PropTypes.string
 };
 
 export default ImageUploader;

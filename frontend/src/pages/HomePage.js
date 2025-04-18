@@ -4,7 +4,7 @@ import PostCard from '../components/PostCard';
 import { UserContext } from '../context/UserContext';
 import { useCart } from '../context/CartContext';
 import { getPosts, claimPost } from '../services/api';
-import axios from 'axios';
+import apiClient from '../services/apiClient';
 
 const HomePage = () => {
   const [posts, setPosts] = useState([]);
@@ -14,28 +14,30 @@ const HomePage = () => {
   const { cart } = useCart();
 
   useEffect(() => {
-    const source = axios.CancelToken.source();
+    const controller = new AbortController();
+    const signal = controller.signal;
 
     const fetchPosts = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const response = await getPosts({ cancelToken: source.token });
+        const response = await apiClient.get('/posts', { signal });
+
         if (Array.isArray(response.data)) {
           setPosts(response.data);
-          setError(null);
         } else {
           console.error('API did not return an array for posts:', response.data);
           setError('Error: Formato de datos inesperado recibido del servidor.');
           setPosts([]);
         }
       } catch (err) {
-        if (axios.isCancel(err)) {
+        if (err.name === 'AbortError') {
           console.log('Solicitud cancelada');
-          return;
+        } else {
+          console.error('Error fetching posts:', err);
+          setError(err.response?.data?.error || err.message || 'Error al cargar las publicaciones');
+          setPosts([]);
         }
-        console.error('Error fetching posts:', err);
-        setError('Error al cargar las publicaciones');
-        setPosts([]);
       } finally {
         setLoading(false);
       }
@@ -44,7 +46,7 @@ const HomePage = () => {
     fetchPosts();
 
     return () => {
-      source.cancel('Componente desmontado');
+      controller.abort();
     };
   }, []);
 
