@@ -12,17 +12,11 @@ services:
     name: node-backend-market # Nombre para el servicio backend en Render
     env: node # Especifica el entorno de ejecución
     plan: free # O elige un plan de pago (Free se suspende por inactividad)
-    # Indica la raíz del backend dentro del repositorio
     rootDir: ./backend
     buildCommand: npm install # Comando para instalar dependencias
     startCommand: npm start # Comando para iniciar el servidor (usa el script 'start' de package.json)
     healthCheckPath: / # Ruta para que Render verifique si el servicio está activo
     envVars:
-      - key: DATABASE_URL
-        fromService: # Obtiene la URL de conexión del servicio de BD
-          type: pserv
-          name: postgres-db-market # Debe coincidir con el nombre del servicio de BD
-          property: connectionString # Re-añadir esta línea
       - key: NODE_ENV
         value: production # Establece el entorno a producción
       - key: JWT_SECRET
