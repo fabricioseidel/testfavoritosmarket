@@ -1,21 +1,39 @@
-services:
-  - type: web
-    name: favoritosmarket-api
-    env: node
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: JWT_SECRET
-        generateValue: true
-      - key: PORT
-        value: 10000
-      - key: DATABASE_URL
-        fromDatabase:
-          name: favoritosmarket-db
-          property: connectionString
+# Render Blueprint for Node.js Backend + PostgreSQL
 
-databases:
-  - name: favoritosmarket-db
-    plan: free
+services:
+  # PostgreSQL Database Service
+  - type: pserv
+    name: postgres-db-market # Nombre para el servicio de BD en Render
+    plan: free # O elige un plan de pago
+    databaseName: marketplace_prod # Nombre de la base de datos
+    user: market_user # Nombre de usuario para la BD
+    # Render injecta automáticamente DATABASE_URL en los servicios conectados
+
+  # Node.js Backend Service
+  - type: web # Indica que es un servicio web
+    name: node-backend-market # Nombre para el servicio backend en Render
+    env: node # Especifica el entorno de ejecución
+    plan: free # O elige un plan de pago (Free se suspende por inactividad)
+    # Indica la raíz del backend dentro del repositorio
+    rootDir: ./backend
+    buildCommand: npm install # Comando para instalar dependencias
+    startCommand: npm start # Comando para iniciar el servidor (usa el script 'start' de package.json)
+    healthCheckPath: / # Ruta para que Render verifique si el servicio está activo
+    envVars:
+      - key: DATABASE_URL
+        fromService: # Obtiene la URL de conexión del servicio de BD
+          type: pserv
+          name: postgres-db-market # Debe coincidir con el nombre del servicio de BD
+          property: connectionString
+      - key: NODE_ENV
+        value: production # Establece el entorno a producción
+      - key: JWT_SECRET
+        generateValue: true # Render generará un secreto seguro
+      - key: PORT # Render provee el puerto, pero es bueno definirlo
+        value: 5000 # O el puerto que usa tu app si no es el estándar de Render (10000)
+      # Añade aquí la URL de tu frontend en Netlify una vez la tengas
+      # - key: FRONTEND_URL
+      #   value: https://tu-app.netlify.app
+      # Añade otras variables de entorno que necesite tu backend
+      # - key: OTRA_VARIABLE
+      #   value: su_valor

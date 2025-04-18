@@ -22,10 +22,30 @@ if (!process.env.JWT_SECRET) {
 }
 
 // Middlewares
+
+// Define allowed origins based on environment
+const allowedOrigins = [
+  'http://localhost:3000', // Frontend local
+  'https://favoritosmarket.netlify.app', // URL Netlify principal (ejemplo)
+  'https://comforting-halva-178cd0.netlify.app', // Otra URL Netlify (ejemplo)
+  // Puedes añadir la URL específica de tu despliegue de Netlify aquí
+  // o leerla desde una variable de entorno: process.env.FRONTEND_URL
+];
+
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://favoritosmarket.netlify.app', 'https://comforting-halva-178cd0.netlify.app', 'https://68003db3ab4b0f271783a345--comforting-halva-178cd0.netlify.app'] 
-    : 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true
 }));
 app.use(express.json());
@@ -87,8 +107,8 @@ app.use('/api/upload', uploadRoutes);
 // Ruta raíz - devolver información sobre la API
 app.get('/', (req, res) => {
   res.json({
-    message: 'FavoritosMarket API - La interfaz de usuario está disponible en Netlify',
-    frontend_url: 'https://favoritosmarket.netlify.app',
+    message: 'FavoritosMarket API',
+    // frontend_url: process.env.FRONTEND_URL || 'https://favoritosmarket.netlify.app', // Opcional: mostrar URL frontend
     api_version: '1.0.0',
     endpoints: [
       '/api/auth', 
@@ -115,8 +135,10 @@ const runMigrations = require('./db-migrate');
 
 // Migraciones y luego iniciar el servidor
 runMigrations().then(() => {
+  // Use PORT from environment variable provided by Render or default to 5000
   const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 }).catch(err => {
-  console.error('Error al iniciar la aplicación:', err);
+  console.error('❌ Error al iniciar la aplicación:', err);
+  process.exit(1); // Salir si las migraciones fallan
 });
