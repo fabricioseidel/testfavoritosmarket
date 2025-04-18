@@ -1,38 +1,57 @@
-/**
- * Configuración centralizada de la aplicación
- */
+// Configuración centralizada para la aplicación frontend
+
+// Determinar la URL base de la API según el entorno
+const getApiBaseUrl = () => {
+  // Prioridad: Variable de entorno específica de React
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  // Entorno de producción (Netlify, Vercel, etc.)
+  if (process.env.NODE_ENV === 'production') {
+    // Reemplaza 'node-backend-market.onrender.com' con el nombre real de tu servicio en Render si es diferente
+    return 'https://node-backend-market.onrender.com/api';
+  }
+  // Entorno de desarrollo local
+  return 'http://localhost:5000/api'; // Asegúrate que el puerto coincida con tu backend local
+};
+
 const appConfig = {
-  // Configuración de API
+  // Configuración de la API
   api: {
-    baseUrl: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
-    timeout: 15000,
-    retry: {
-      maxRetries: 3,
-      retryDelay: 1000
-    }
+    baseUrl: getApiBaseUrl(),
+    timeout: 10000, // Tiempo de espera para las solicitudes API (en ms)
   },
-  
-  // Configuración de imágenes
-  upload: {
-    maxSize: 5 * 1024 * 1024, // 5MB
-    allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    allowedExtensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
-    defaultImage: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5OTkiPlNpbiBJbWFnZW48L3RleHQ+PC9zdmc+'
-  },
-  
+
   // Configuración de autenticación
   auth: {
-    tokenStorageKey: 'user',
-    cookieName: 'token',
-    tokenExpiry: '7d'
+    tokenStorageKey: 'user', // Clave para guardar datos de usuario/token en localStorage
+    tokenHeader: 'Authorization', // Nombre del encabezado para enviar el token
+    tokenPrefix: 'Bearer ', // Prefijo para el token en el encabezado
   },
-  
-  // Configuración de interfaz de usuario
+
+  // Configuración de UI
   ui: {
-    notificationDuration: 5000, // 5 segundos
-    animationDuration: 300, // 300ms
-    paginationSize: 10 // Items por página
-  }
+    notificationDuration: 3000, // Duración predeterminada de las notificaciones (en ms)
+    itemsPerPage: 12, // Número de elementos por página en listados
+  },
+
+  // Configuración de carga de archivos
+  upload: {
+    maxSize: 5 * 1024 * 1024, // Tamaño máximo de archivo (5MB)
+    allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], // Tipos MIME permitidos
+    allowedExtensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp'], // Extensiones permitidas
+    defaultImage: '/placeholder-image.png', // Imagen por defecto o fallback
+  },
+
+  // Otras configuraciones
+  appName: 'FavoritosMarket',
+  appVersion: '1.0.0',
 };
+
+// Log para verificar la URL base en diferentes entornos
+console.log(`[App Config] NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`[App Config] REACT_APP_API_URL: ${process.env.REACT_APP_API_URL}`);
+console.log(`[App Config] API Base URL: ${appConfig.api.baseUrl}`);
+
 
 export default appConfig;

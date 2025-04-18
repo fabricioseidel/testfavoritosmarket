@@ -1,0 +1,21 @@
+# Configuración de Netlify para el frontend React
+
+[build]
+  # Directorio base del frontend dentro del repositorio
+  base = "frontend/"
+  # Comando para construir la aplicación React
+  command = "npm run build"
+  # Directorio donde se genera la build (usualmente 'build' para Create React App)
+  publish = "frontend/build/"
+
+[build.environment]
+  # Puedes definir variables de entorno específicas para la build aquí si es necesario
+  # NODE_VERSION = "18" # O la versión que prefieras/necesites
+  # REACT_APP_API_URL = "https://tu-backend-url.onrender.com/api" # Opcional si ya lo manejas en appConfig.js
+
+# Redirección para manejar el enrutamiento del lado del cliente (SPA)
+# Esto asegura que todas las rutas sean manejadas por index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

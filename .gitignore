@@ -13,7 +13,7 @@ package-lock.json # Si usas npm y prefieres no versionarlo
 yarn.lock # Si usas yarn y prefieres no versionarlo
 
 # Frontend (React Build output)
-frontend/build/
+frontend/build/ # Asegurarse que esta línea existe
 frontend/node_modules/ # Redundante si ya está node_modules/ globalmente, pero más explícito
 
 # Backend
