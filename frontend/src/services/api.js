@@ -1,56 +1,59 @@
-import axios from '../axiosConfig';
+import apiClient from './apiClient'; // Corregir importación
 
 // Funciones para interactuar con la API
 
 // Autenticación
-export const loginUser = (credentials) => axios.post('/api/auth/login', credentials);
-export const registerUser = (userData) => axios.post('/api/auth/register', userData);
+export const loginUser = (credentials) => apiClient.post('/auth/login', credentials); // Quitar /api
+export const registerUser = (userData) => apiClient.post('/auth/register', userData); // Quitar /api
 
 // Posts
-export const getPosts = () => axios.get('/api/posts');
-export const getPostById = (id) => axios.get(`/api/posts/${id}`);
-export const createPost = (postData) => axios.post('/api/posts', postData);
-export const updatePost = (id, postData) => axios.put(`/api/posts/${id}`, postData);
-export const deletePost = (id) => axios.delete(`/api/posts/${id}`);
+export const getPosts = () => apiClient.get('/posts'); // Quitar /api
+export const getPostById = (id) => apiClient.get(`/posts/${id}`); // Quitar /api
+export const createPost = (postData) => apiClient.post('/posts/create-post', postData); // Ajustar ruta y quitar /api
+export const updatePost = (id, postData) => apiClient.put(`/posts/${id}`, postData); // Quitar /api
+export const deletePost = (id) => apiClient.delete(`/posts/${id}`); // Quitar /api
+export const searchPosts = (query) => apiClient.get(`/posts/search?q=${encodeURIComponent(query)}`); // Añadir función de búsqueda
+export const claimPost = (postId) => apiClient.put(`/posts/claim/${postId}`); // Añadir función para reclamar
 
 // Perfil
-export const getProfile = () => axios.get('/api/profile');
-export const updateProfile = (profileData) => axios.put('/api/profile', profileData);
+export const getProfile = () => apiClient.get('/profile'); // Quitar /api
+export const updateProfile = (profileData) => apiClient.put('/profile', profileData); // Quitar /api (y asegurar que la ruta backend sea /profile, no /profile/update)
 
 // Categorías
-export const getCategories = () => axios.get('/api/categories');
+export const getCategories = () => apiClient.get('/categories'); // Quitar /api
 
-// Favoritos - corregido para coincidir con rutas del backend
-export const getFavorites = () => axios.get('/api/posts/favorites');
-export const toggleFavorite = (publicacion_id) => axios.post('/api/posts/favorite', { publicacion_id });
-export const checkFavorite = (id) => axios.get(`/api/posts/favorite/${id}`);
+// Favoritos
+export const getFavorites = () => apiClient.get('/favorites'); // Quitar /api
+export const toggleFavorite = (publicacion_id) => apiClient.post('/favorites', { publicacion_id }); // Quitar /api
+export const checkFavorite = (id) => apiClient.get(`/favorites/check/${id}`); // Quitar /api
 
-// Subida de archivos
+// Subida de archivos (usa apiClient pero mantiene Content-Type específico)
 export const uploadImage = (formData) => {
-  return axios.post('/api/upload', formData, {
+  return apiClient.post('/upload/image', formData, { // Ajustar ruta y quitar /api
     headers: {
       'Content-Type': 'multipart/form-data'
     }
   });
 };
 
-// Agregar esta función específica para la subida de imágenes de registro
 export const uploadRegistrationImage = (formData) => {
-  return axios.post('/api/upload/registration-image', formData, {
+  return apiClient.post('/upload/registration-image', formData, { // Quitar /api
     headers: {
       'Content-Type': 'multipart/form-data'
     }
   });
 };
 
-// Función para probar la conexión al backend
+// Función para probar la conexión al backend (usando la baseURL directamente)
 export const testApiConnection = async () => {
   try {
-    const response = await axios.get('/');
-    console.log('Conexión API exitosa:', response.data);
-    return response.data;
+    // No usar apiClient aquí para probar la raíz
+    const response = await fetch(apiClient.defaults.baseURL.replace('/api', '/')); // Llama a la raíz del backend
+    const data = await response.json();
+    console.log('Conexión API exitosa:', data);
+    return data;
   } catch (error) {
     console.error('Error al conectar con la API:', error);
-    throw error;
+    throw error; // Relanzar error
   }
 };

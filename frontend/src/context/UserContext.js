@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import apiClient from '../services/apiClient'; // Importar apiClient
+import { getProfile } from '../services/api'; // Importar getProfile
 
 export const UserContext = createContext();
 
@@ -47,7 +48,7 @@ export const UserProvider = ({ children }) => {
           tokenPresente: !!parsedUser.token
         });
 
-        // Validar el token con una llamada al backend
+        // Validar el token con una llamada al backend usando apiClient
         validateToken(parsedUser.token);
       } catch (error) {
         console.error('Error al cargar usuario desde localStorage:', error);
@@ -59,23 +60,21 @@ export const UserProvider = ({ children }) => {
     // Función para validar el token con el backend
     const validateToken = async (token) => {
       try {
-        // Configurar el header de autorización
-        const config = {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        };
-        
-        // Intentar obtener datos del perfil para validar el token
-        await axios.get('/api/auth/profile', config);
-        // Si llegamos aquí, el token es válido
-        setLoading(false);
+        // Configurar el header de autorización temporalmente para esta llamada
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+        // Llamar a una ruta protegida, como getProfile
+        await getProfile();
+        console.log('✅ Token validado exitosamente con /api/profile');
+        setLoading(false); // Token válido, terminar carga
+
       } catch (error) {
-        console.warn('Token inválido o expirado, cerrando sesión...');
-        // Si hay un error, el token no es válido
+        console.warn('❌ Token inválido o expirado:', error.response?.data?.error || error.message);
+        // Si el token no es válido, limpiar localStorage y estado
         localStorage.removeItem('user');
         setUser(null);
-        setLoading(false);
+        delete apiClient.defaults.headers.common['Authorization']; // Limpiar header
+        setLoading(false); // Terminar carga
       }
     };
 
@@ -84,37 +83,43 @@ export const UserProvider = ({ children }) => {
 
   // Función para iniciar sesión
   const login = (userData) => {
-    // Validar que el objeto de usuario contiene los datos necesarios
-    if (!userData || !userData.user || !userData.token) {
-      console.error('Datos de login incompletos:', userData);
-      return;
+    try {
+      // Asegurarse que userData y userData.user existen
+      if (!userData || !userData.user || !userData.token) {
+        console.error('Login fallido: Datos de usuario incompletos recibidos.', userData);
+        return;
+      }
+
+      // Guardar en localStorage (solo user y token)
+      const dataToStore = {
+        id: userData.user.id,
+        nombre: userData.user.nombre,
+        email: userData.user.email,
+        foto_perfil: userData.user.foto_perfil,
+        token: userData.token
+      };
+      localStorage.setItem('user', JSON.stringify(dataToStore));
+
+      // Actualizar estado
+      setUser(dataToStore);
+
+      // Configurar token en apiClient para futuras solicitudes
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
+      console.log('Usuario logueado:', dataToStore.id);
+    } catch (error) {
+      console.error('Error al procesar datos de login:', error);
     }
-
-    // Crear un objeto de usuario completo con toda la información necesaria
-    const userToStore = {
-      id: userData.user.id,
-      nombre: userData.user.nombre,
-      email: userData.user.email,
-      foto_perfil: userData.user.foto_perfil,
-      token: userData.token
-    };
-
-    console.log('Guardando datos de usuario en contexto:', {
-      id: userToStore.id,
-      nombre: userToStore.nombre,
-      tokenPresente: !!userToStore.token
-    });
-
-    // Actualizar el estado y guardar en localStorage
-    setUser(userToStore);
-    localStorage.setItem('user', JSON.stringify(userToStore));
   };
 
   // Función para cerrar sesión
   const logout = () => {
-    setUser(null);
+    // Limpiar localStorage
     localStorage.removeItem('user');
-    console.log('Sesión cerrada, usuario eliminado del contexto');
+    // Limpiar estado
+    setUser(null);
+    // Limpiar token de apiClient
+    delete apiClient.defaults.headers.common['Authorization'];
+    console.log('Usuario deslogueado');
   };
 
   return (
