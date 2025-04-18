@@ -1,30 +1,25 @@
-# Render Blueprint for Node.js Backend + PostgreSQL
+# Render Blueprint - Intento Simplificado
 
 services:
-  # Node.js Backend Service (Definido primero)
-  - type: web # Indica que es un servicio web
-    name: node-backend-market # Nombre para el servicio backend en Render
-    env: node # Especifica el entorno de ejecución
-    plan: free # O elige un plan de pago (Free se suspende por inactividad)
+  # Node.js Backend Service
+  - type: web
+    name: node-backend-market
+    env: node
+    # plan: free # Opcional, Render suele usar free por defecto
     rootDir: ./backend
-    buildCommand: npm install # Comando para instalar dependencias
-    startCommand: npm start # Comando para iniciar el servidor (usa el script 'start' de package.json)
-    healthCheckPath: / # Ruta para que Render verifique si el servicio está activo
+    buildCommand: npm install
+    startCommand: npm start
+    # healthCheckPath: / # Eliminado temporalmente
     envVars:
-      # DATABASE_URL será inyectada automáticamente por Render al detectar el pserv
+      # DATABASE_URL será inyectada automáticamente
       - key: NODE_ENV
-        value: production # Establece el entorno a producción
+        value: production
       - key: JWT_SECRET
-        generateValue: true # Render generará un secreto seguro
-      # Añade aquí la URL de tu frontend en Netlify una vez la tengas
-      # - key: FRONTEND_URL
+        generateValue: true
+      # - key: FRONTEND_URL # Añadir después si funciona
       #   value: https://tu-app.netlify.app
-      # Añade otras variables de entorno que necesite tu backend
-      # - key: OTRA_VARIABLE
-      #   value: su_valor
 
-  # PostgreSQL Database Service (Definido después)
+  # PostgreSQL Database Service
   - type: pserv
-    name: postgres-db-market # Nombre para el servicio de BD en Render
-    plan: free # O elige un plan de pago
-    # Render injecta automáticamente DATABASE_URL en los servicios conectados
+    name: postgres-db-market
+    # plan: free # Eliminado temporalmente
