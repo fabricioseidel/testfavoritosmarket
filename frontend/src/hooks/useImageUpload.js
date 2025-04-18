@@ -34,9 +34,9 @@ export const useImageUpload = (onUploadSuccess, isRegistration = false) => {
         response = await uploadService.uploadImage(formData, onProgress);
       }
 
-      // Esperar 'url' en lugar de 'imageUrl'
-      if (response.data && response.data.url) {
-        onUploadSuccess(response.data.url); // Usar response.data.url
+      // Esperar 'fileUrl' según el log del navegador
+      if (response.data && response.data.fileUrl) {
+        onUploadSuccess(response.data.fileUrl); // Usar response.data.fileUrl
       } else {
         // Loguear la respuesta recibida si es inválida para depuración
         console.error('Respuesta inválida recibida del servidor de subida:', response.data);
