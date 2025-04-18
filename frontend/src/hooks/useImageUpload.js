@@ -34,9 +34,12 @@ export const useImageUpload = (onUploadSuccess, isRegistration = false) => {
         response = await uploadService.uploadImage(formData, onProgress);
       }
 
-      if (response.data && response.data.imageUrl) {
-        onUploadSuccess(response.data.imageUrl); // Llamar al callback con la URL
+      // Esperar 'url' en lugar de 'imageUrl'
+      if (response.data && response.data.url) {
+        onUploadSuccess(response.data.url); // Usar response.data.url
       } else {
+        // Loguear la respuesta recibida si es inválida para depuración
+        console.error('Respuesta inválida recibida del servidor de subida:', response.data);
         throw new Error('Respuesta inválida del servidor de subida');
       }
     } catch (err) {
