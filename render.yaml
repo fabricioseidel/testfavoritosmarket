@@ -22,6 +22,7 @@ services:
         fromService: # Obtiene la URL de conexión del servicio de BD
           type: pserv
           name: postgres-db-market # Debe coincidir con el nombre del servicio de BD
+          property: connectionString # Re-añadir esta línea
       - key: NODE_ENV
         value: production # Establece el entorno a producción
       - key: JWT_SECRET
