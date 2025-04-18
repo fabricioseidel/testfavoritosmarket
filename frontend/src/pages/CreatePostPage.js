@@ -1,224 +1,151 @@
-import React, { useState, useContext, useEffect } from 'react';
-import axios from 'axios';
-import { UserContext } from '../context/UserContext';
-import { Container, Form, Button, Alert, Row, Col } from 'react-bootstrap';
+import React, { useState, useContext } from 'react';
+import { Container, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import ImageUploader from '../components/ImageUploader';
+import { UserContext } from '../context/UserContext';
+import { postService } from '../services/apiClient'; // Importar postService
+import CategorySelector from '../components/CategorySelector'; // Asegurarse que CategorySelector usa categoryService
+import ImageUploader from '../components/ImageUploader'; // Asegurarse que ImageUploader usa uploadService
 
 const CreatePostPage = () => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [price, setPrice] = useState('');
-  const [image, setImage] = useState('');
+  const [formData, setFormData] = useState({
+    titulo: '',
+    descripcion: '',
+    precio: '',
+    categoria_id: '',
+  });
+  const [imageUrl, setImageUrl] = useState('');
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [validated, setValidated] = useState(false);
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
-  const [categories, setCategories] = useState([]);
 
-  // Cargar categorías al montar el componente
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get('/api/categories');
-        setCategories(response.data);
-        console.log('Categorías cargadas:', response.data);
-      } catch (err) {
-        console.error('Error al cargar categorías:', err);
-      }
-    };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-    fetchCategories();
-  }, []);
-
-  // Validar campos de forma individual
-  const validateFields = () => {
-    console.log('Validando campos:', { title, description, categoryId, price, image });
-    
-    if (!title.trim()) {
-      setError('El título es obligatorio');
-      return false;
-    }
-    
-    if (!description.trim()) {
-      setError('La descripción es obligatoria');
-      return false;
-    }
-    
-    if (!categoryId) {
-      setError('Debes seleccionar una categoría');
-      return false;
-    }
-    
-    if (!price || Number(price) <= 0) {
-      setError('El precio debe ser un número positivo');
-      return false;
-    }
-    
-    if (!image) {
-      setError('La imagen es obligatoria');
-      return false;
-    }
-    
-    return true;
+  const handleImageUploaded = (url) => {
+    setImageUrl(url);
+    setFormData((prev) => ({ ...prev, imagen: url }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
-    
-    console.log('Usuario en el contexto:', user);
-    console.log('Valores del formulario:', { title, description, categoryId, price, image });
-
-    if (!user || !user.token) {
-      setError('Debes iniciar sesión para crear una publicación');
-      return;
-    }
-
-    // Validar todos los campos
-    if (!validateFields()) {
+    const form = e.currentTarget;
+    if (form.checkValidity() === false) {
+      e.stopPropagation();
+      setValidated(true);
       return;
     }
 
     setLoading(true);
+    setError(null);
+
+    const postData = {
+      titulo: formData.titulo,
+      descripcion: formData.descripcion,
+      precio: parseFloat(formData.precio),
+      categoria_id: parseInt(formData.categoria_id, 10),
+      imagen: imageUrl || null,
+    };
+
+    if (isNaN(postData.precio) || isNaN(postData.categoria_id)) {
+      setError('El precio y la categoría son obligatorios.');
+      setLoading(false);
+      return;
+    }
+    if (!postData.imagen) {
+      setError('La imagen es obligatoria.');
+      setLoading(false);
+      return;
+    }
 
     try {
-      console.log('Datos a enviar al servidor:', {
-        titulo: title,
-        descripcion: description,
-        categoria_id: parseInt(categoryId),
-        precio: parseFloat(price),
-        imagen: image
-      });
+      const response = await postService.createPost(postData);
 
-      const response = await axios.post(
-        '/api/posts/create-post',
-        {
-          titulo: title,
-          descripcion: description,
-          categoria_id: parseInt(categoryId),
-          precio: parseFloat(price),
-          imagen: image
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user.token}` // Asegúrate de que este token se envía
-          }
-        }
-      );
-
-      console.log('Publicación creada exitosamente:', response.data);
-      setSuccess(true);
-      
-      // Limpiar el formulario
-      setTitle('');
-      setDescription('');
-      setCategoryId('');
-      setPrice('');
-      setImage('');
-      
-      // Redirigir después de un breve retraso
-      setTimeout(() => {
-        navigate('/my-posts');
-      }, 2000);
-    } catch (error) {
-      console.error('Error al crear la publicación:', error);
-      const errorMsg = error.response?.data?.error || 'Error al crear la publicación';
-      setError(errorMsg);
+      console.log('Publicación creada:', response.data);
+      navigate(`/post/${response.data.id}`);
+    } catch (err) {
+      console.error('Error al crear la publicación:', err);
+      setError(err.response?.data?.error || err.message || 'Error al crear la publicación');
     } finally {
       setLoading(false);
     }
   };
 
-  // Manejador para la subida de imagen
-  const handleImageUploaded = (imageUrl) => {
-    setImage(imageUrl);
-  };
-
   return (
-    <Container className="mt-5">
-      <h1 className="text-center mb-4">Crear Publicación</h1>
-
+    <Container className="my-5" style={{ maxWidth: '700px' }}>
+      <h1>Crear Nueva Publicación</h1>
       {error && <Alert variant="danger">{error}</Alert>}
-      {success && <Alert variant="success">Publicación creada exitosamente. Redirigiendo...</Alert>}
+      <Form noValidate validated={validated} onSubmit={handleSubmit}>
+        <Form.Group controlId="formTitle" className="mb-3">
+          <Form.Label>Título<span className="text-danger">*</span></Form.Label>
+          <Form.Control
+            type="text"
+            name="titulo"
+            value={formData.titulo}
+            onChange={handleChange}
+            required
+          />
+          <Form.Control.Feedback type="invalid">
+            Por favor ingresa un título.
+          </Form.Control.Feedback>
+        </Form.Group>
 
-      <Form onSubmit={handleSubmit}>
-        <Row>
-          <Col md={6}>
-            <Form.Group className="mb-3">
-              <Form.Label>Título</Form.Label>
-              <Form.Control
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Título del producto"
-                required
-              />
-            </Form.Group>
-          </Col>
-
-          <Col md={6}>
-            <Form.Group className="mb-3">
-              <Form.Label>Categoría</Form.Label>
-              <Form.Select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                required
-              >
-                <option value="">Selecciona una categoría</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.nombre}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-          </Col>
-        </Row>
-        
-        <Form.Group className="mb-3">
-          <Form.Label>Descripción</Form.Label>
+        <Form.Group controlId="formDescription" className="mb-3">
+          <Form.Label>Descripción<span className="text-danger">*</span></Form.Label>
           <Form.Control
             as="textarea"
             rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe el producto que estás vendiendo"
+            name="descripcion"
+            value={formData.descripcion}
+            onChange={handleChange}
             required
           />
+          <Form.Control.Feedback type="invalid">
+            Por favor ingresa una descripción.
+          </Form.Control.Feedback>
         </Form.Group>
-        
-        <Form.Group className="mb-3">
-          <Form.Label>Precio</Form.Label>
+
+        <Form.Group controlId="formPrice" className="mb-3">
+          <Form.Label>Precio<span className="text-danger">*</span></Form.Label>
           <Form.Control
             type="number"
             step="0.01"
             min="0.01"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="Ingresa el precio"
+            name="precio"
+            value={formData.precio}
+            onChange={handleChange}
             required
           />
+          <Form.Control.Feedback type="invalid">
+            Por favor ingresa un precio válido.
+          </Form.Control.Feedback>
         </Form.Group>
 
-        <ImageUploader 
-          onImageUploaded={handleImageUploaded}
-          initialImage={image}
+        <Form.Group controlId="formImage" className="mb-3">
+          <Form.Label>Imagen de la Publicación<span className="text-danger">*</span></Form.Label>
+          <ImageUploader onImageUploaded={handleImageUploaded} initialImage={imageUrl} />
+          <Form.Control type="hidden" required={!imageUrl} />
+          <Form.Control.Feedback type="invalid">
+            Por favor sube una imagen.
+          </Form.Control.Feedback>
+        </Form.Group>
+
+        <CategorySelector
+          value={formData.categoria_id}
+          onChange={handleChange}
+          required={true}
         />
-        
-        <div className="d-grid gap-2 mt-4">
-          <Button 
-            variant="primary" 
-            size="lg" 
-            type="submit" 
-            disabled={loading}
-          >
-            {loading ? 'Creando...' : 'Crear Publicación'}
-          </Button>
-        </div>
+
+        <Button variant="primary" type="submit" disabled={loading}>
+          {loading ? (
+            <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+          ) : (
+            'Crear Publicación'
+          )}
+        </Button>
       </Form>
     </Container>
   );
