@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const cookieParser = require('cookie-parser'); // Importar cookie-parser
 const app = express();
 const pool = require('./db'); // Importar el archivo db.js
 const favoriteRoutes = require('./routes/favoriteRoutes'); // Usar solo esta versión
@@ -28,6 +29,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use(cookieParser()); // Añadir middleware para procesar cookies
 
 // Configurar carpeta de uploads como directorio estático
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
