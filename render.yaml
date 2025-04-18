@@ -5,8 +5,6 @@ services:
   - type: pserv
     name: postgres-db-market # Nombre para el servicio de BD en Render
     plan: free # O elige un plan de pago
-    databaseName: marketplace_prod # Nombre de la base de datos
-    user: market_user # Nombre de usuario para la BD
     # Render injecta automáticamente DATABASE_URL en los servicios conectados
 
   # Node.js Backend Service
@@ -29,8 +27,6 @@ services:
         value: production # Establece el entorno a producción
       - key: JWT_SECRET
         generateValue: true # Render generará un secreto seguro
-      - key: PORT # Render provee el puerto, pero es bueno definirlo
-        value: 5000 # O el puerto que usa tu app si no es el estándar de Render (10000)
       # Añade aquí la URL de tu frontend en Netlify una vez la tengas
       # - key: FRONTEND_URL
       #   value: https://tu-app.netlify.app
