@@ -13,7 +13,12 @@ export const useImageUpload = (onUploadSuccess, isRegistration = false) => {
   const [progress, setProgress] = useState(0);
 
   const handleUpload = async (file) => {
-    if (!file) return;
+    console.log(`useImageUpload: handleUpload llamado con archivo: ${file?.name}. Es registro: ${isRegistration}`);
+
+    if (!file) {
+      console.log('useImageUpload: No hay archivo para subir.');
+      return;
+    }
 
     setUploading(true);
     setError(null);

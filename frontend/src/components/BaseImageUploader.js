@@ -1,175 +1,91 @@
-import React, { useState, useRef } from 'react';
-import { Button, Form, Image, Spinner, Alert, ProgressBar } from 'react-bootstrap';
+import React, { useRef, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import appConfig from '../config/appConfig';
+import { Form, Image, Button } from 'react-bootstrap';
 
-/**
- * Componente base para cargar imágenes
- * @param {Object} props - Propiedades del componente
- * @param {Function} props.onFileUpload - Función a llamar cuando se sube un archivo
- * @param {string} props.initialImage - URL de imagen inicial para mostrar
- * @param {string} props.label - Etiqueta del campo
- * @param {boolean} props.required - Si el campo es obligatorio
- * @param {Object} props.customRequestConfig - Configuración personalizada para la solicitud
- */
-const BaseImageUploader = ({
-  onFileUpload,
-  initialImage = '',
-  label = 'Imagen',
-  required = false,
-  customRequestConfig = {}
-}) => {
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [preview, setPreview] = useState(initialImage || '');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [progress, setProgress] = useState(0);
+// Imagen base64 para usar como fallback
+const defaultImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5OTkiPlNpbiBJbWFnZW48L3RleHQ+PC9zdmc+';
+
+const BaseImageUploader = ({ onFileUpload, initialImage = '', label = "Subir Imagen", required = false }) => {
   const fileInputRef = useRef(null);
+  const [preview, setPreview] = useState(initialImage || defaultImage);
 
-  // Imagen fallback para errores
-  const fallbackImage = appConfig.upload.defaultImage;
-
-  /**
-   * Maneja el cambio de archivo seleccionado
-   * @param {Event} event - Evento de cambio de archivo
-   */
   const handleFileChange = (event) => {
+    console.log('BaseImageUploader: handleFileChange disparado!'); // Log 1
     const file = event.target.files[0];
-    if (!file) return;
+    if (file) {
+      console.log('BaseImageUploader: Archivo seleccionado:', file.name); // Log 2
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
 
-    // Validación de tamaño
-    if (file.size > appConfig.upload.maxSize) {
-      setError(`La imagen no debe superar los ${appConfig.upload.maxSize / (1024 * 1024)}MB`);
-      return;
+      if (onFileUpload) {
+        console.log('BaseImageUploader: Llamando a onFileUpload...'); // Log 3
+        onFileUpload(file);
+      } else {
+        console.warn('BaseImageUploader: Prop onFileUpload no encontrada.');
+      }
+    } else {
+       console.log('BaseImageUploader: No se seleccionó archivo.');
     }
-
-    // Validación de tipo de archivo
-    if (!appConfig.upload.allowedTypes.includes(file.type)) {
-      setError(`Formato no soportado. Use ${appConfig.upload.allowedExtensions.join(', ')}`);
-      return;
-    }
-
-    setSelectedFile(file);
-    setError('');
-    
-    // Crear URL para previsualización
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
+     // Resetear el valor del input para permitir seleccionar el mismo archivo de nuevo
+     if (event.target) {
+        event.target.value = null;
+     }
   };
 
-  /**
-   * Maneja acción de arrastrar y soltar
-   * @param {DragEvent} e - Evento de arrastrar
-   */
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileChange({ target: { files: e.dataTransfer.files }});
+  const handleButtonClick = () => {
+    console.log('BaseImageUploader: handleButtonClick disparado!'); // Log 4
+    if (fileInputRef.current) {
+      fileInputRef.current.click(); // Simular clic en el input oculto
+      console.log('BaseImageUploader: Clic simulado en input de archivo.'); // Log 5
+    } else {
+       console.error('BaseImageUploader: Referencia al input de archivo no encontrada.');
     }
   };
 
-  /**
-   * Previene comportamiento predeterminado durante arrastre
-   * @param {DragEvent} e - Evento de arrastre sobre elemento
-   */
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  /**
-   * Maneja errores en la carga de imágenes
-   * @param {Event} e - Evento de error
-   */
   const handleImageError = (e) => {
-    if (e.target.hasAttribute('data-fallback-applied')) return;
-    e.target.setAttribute('data-fallback-applied', 'true');
-    e.target.src = fallbackImage;
+    if (!e.target.src.startsWith('data:image')) {
+       setPreview(defaultImage);
+    }
   };
+
+  // Actualizar previsualización si initialImage cambia
+  useEffect(() => {
+    setPreview(initialImage || defaultImage);
+  }, [initialImage]);
 
   return (
-    <Form.Group className="mb-3">
-      <Form.Label>{label} {required && <span className="text-danger">*</span>}</Form.Label>
-      
-      {preview && (
-        <div className="mb-3 text-center">
-          <Image 
-            src={preview} 
-            alt="Previsualización" 
-            style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} 
-            thumbnail
-            onError={handleImageError}
-          />
-        </div>
-      )}
-      
-      <div 
-        className="drop-area p-4 mb-2 border rounded text-center"
-        style={{ 
-          border: '2px dashed #ccc', 
-          backgroundColor: '#f8f9fa',
-          cursor: 'pointer'
-        }}
-        onClick={() => fileInputRef.current?.click()}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-      >
-        <p className="mb-1">
-          <i className="bi bi-cloud-arrow-up" style={{ fontSize: '2rem' }}></i>
-        </p>
-        <p>Arrastra una imagen aquí o haz clic para seleccionar</p>
-        <Form.Control 
-          type="file" 
-          onChange={handleFileChange}
-          accept="image/*"
-          disabled={loading}
-          style={{ display: 'none' }}
-          ref={fileInputRef}
+    <div className="mb-3 text-center">
+      <Form.Label>{label}{required && <span className="text-danger">*</span>}</Form.Label>
+      <div>
+        <Image
+          src={preview}
+          alt="Previsualización"
+          thumbnail
+          style={{ width: '150px', height: '150px', objectFit: 'cover', marginBottom: '10px', cursor: 'pointer' }}
+          onClick={handleButtonClick} // Clic en imagen activa el input
+          onError={handleImageError}
         />
       </div>
-      
-      {progress > 0 && loading && (
-        <ProgressBar now={progress} label={`${progress}%`} className="mt-2" />
-      )}
-      
-      <div className="mt-2">
-        <Button 
-          variant="primary" 
-          onClick={() => onFileUpload(selectedFile, setLoading, setError, setProgress, setPreview)}
-          disabled={!selectedFile || loading}
-          className="mt-2 w-100"
-        >
-          {loading ? (
-            <>
-              <Spinner as="span" animation="border" size="sm" /> Subiendo...
-            </>
-          ) : 'Subir Imagen'}
-        </Button>
-      </div>
-      
-      {error && (
-        <Alert variant="danger" className="mt-2">
-          {error}
-          {error.includes('sesión') && (
-            <div className="mt-2">
-              <Button variant="outline-primary" size="sm" onClick={() => window.location.href = '/login'}>
-                Iniciar sesión nuevamente
-              </Button>
-            </div>
-          )}
-        </Alert>
-      )}
-      
-      <Form.Text className="text-muted mt-2 d-block">
-        Formatos permitidos: {appConfig.upload.allowedExtensions.join(', ')}. 
-        Tamaño máximo: {appConfig.upload.maxSize / (1024 * 1024)}MB.
-      </Form.Text>
-    </Form.Group>
+      {/* Input de archivo oculto */}
+      <Form.Control
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange} // Este es el evento clave
+        accept="image/*"
+        style={{ display: 'none' }}
+        required={required && !preview}
+      />
+      {/* Botón visible */}
+      <Button variant="outline-primary" size="sm" onClick={handleButtonClick}>
+        Seleccionar Archivo
+      </Button>
+       <Form.Control.Feedback type="invalid">
+         Por favor selecciona una imagen.
+       </Form.Control.Feedback>
+    </div>
   );
 };
 
@@ -177,8 +93,7 @@ BaseImageUploader.propTypes = {
   onFileUpload: PropTypes.func.isRequired,
   initialImage: PropTypes.string,
   label: PropTypes.string,
-  required: PropTypes.bool,
-  customRequestConfig: PropTypes.object
+  required: PropTypes.bool
 };
 
 export default BaseImageUploader;
