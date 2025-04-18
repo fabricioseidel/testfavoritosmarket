@@ -81,33 +81,45 @@ export const UserProvider = ({ children }) => {
     loadUserFromStorage();
   }, []);
 
-  // Función para iniciar sesión
+  // Función para iniciar sesión o actualizar datos del usuario logueado
   const login = (userData) => {
     try {
-      // Asegurarse que userData y userData.user existen
-      if (!userData || !userData.user || !userData.token) {
-        console.error('Login fallido: Datos de usuario incompletos recibidos.', userData);
+      // --- CORRECCIÓN AQUÍ ---
+      // Determinar la fuente de los datos del usuario (login inicial vs. actualización)
+      const userDetails = userData.user || userData; // Si existe userData.user, úsalo; si no, usa userData directamente.
+      const token = userData.token || user?.token; // Usa el token de userData si existe, si no, usa el token actual del contexto (para actualizaciones)
+
+      // Validar que tengamos los datos esenciales
+      if (!userDetails || !userDetails.id || !token) {
+        console.error('Login/Update fallido: Datos esenciales (ID o Token) faltantes.', { userDetails, tokenProvided: !!userData.token });
+        // Podríamos incluso intentar limpiar si el token falta en una actualización
+        if (!token) logout();
         return;
       }
 
-      // Guardar en localStorage (solo user y token)
+      // Construir el objeto a guardar/actualizar
       const dataToStore = {
-        id: userData.user.id,
-        nombre: userData.user.nombre,
-        email: userData.user.email,
-        foto_perfil: userData.user.foto_perfil,
-        token: userData.token
+        id: userDetails.id,
+        nombre: userDetails.nombre,
+        email: userDetails.email,
+        foto_perfil: userDetails.foto_perfil,
+        token: token // Asegurarse de guardar el token correcto
       };
+
+      // Guardar en localStorage
       localStorage.setItem('user', JSON.stringify(dataToStore));
 
-      // Actualizar estado
+      // Actualizar estado del contexto
       setUser(dataToStore);
 
-      // Configurar token en apiClient para futuras solicitudes
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
-      console.log('Usuario logueado:', dataToStore.id);
+      // Configurar token en apiClient para futuras solicitudes (si no está ya)
+      if (!apiClient.defaults.headers.common['Authorization']) {
+         apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      console.log('Usuario logueado/actualizado en contexto:', dataToStore.id);
+
     } catch (error) {
-      console.error('Error al procesar datos de login:', error);
+      console.error('Error al procesar datos de login/update:', error);
     }
   };
 
