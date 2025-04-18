@@ -45,12 +45,6 @@ const BaseImageUploader = ({ onFileUpload, initialImage = '', label = "Subir Ima
     }
   };
 
-  const handleImageError = (e) => {
-    if (!e.target.src.startsWith('data:image')) {
-       setPreview(defaultImage);
-    }
-  };
-
   // Actualizar previsualización si initialImage cambia
   useEffect(() => {
     setPreview(initialImage || defaultImage);
@@ -66,7 +60,6 @@ const BaseImageUploader = ({ onFileUpload, initialImage = '', label = "Subir Ima
           thumbnail
           style={{ width: '150px', height: '150px', objectFit: 'cover', marginBottom: '10px', cursor: 'pointer' }}
           onClick={handleButtonClick} // Clic en imagen activa el input
-          onError={handleImageError}
         />
       </div>
       {/* Input de archivo oculto */}

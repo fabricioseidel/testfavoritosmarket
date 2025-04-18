@@ -113,20 +113,19 @@ const ProfilePage = () => {
 
   // Función para manejar URLs de imagen inválidas
   const handleImageError = (e) => {
-    // Prevenimos el bucle infinito verificando si ya hemos intentado cargar una imagen de respaldo
-    if (e.target.hasAttribute('data-fallback-applied')) {
-      return; // Ya aplicamos una imagen de respaldo, no hacemos nada más
+    console.log(`ProfilePage: handleImageError triggered for src: ${e.target.src}`); // Log de error
+    // Solo aplicar fallback si la URL fallida NO es ya la imagen default
+    if (fotoPerfil !== defaultProfileImage) {
+       console.log('ProfilePage: Aplicando imagen de fallback.');
+       setFotoPerfil(defaultProfileImage); // Actualizar estado en lugar de e.target.src
+    } else {
+       console.log('ProfilePage: La imagen de fallback ya está aplicada o la URL fallida es la de fallback.');
     }
-    
-    // Marcamos que hemos aplicado una imagen de respaldo
-    e.target.setAttribute('data-fallback-applied', 'true');
-    
-    // Usamos una imagen base64 minimalista
-    e.target.src = defaultProfileImage;
   };
 
   // Manejar la subida de la imagen de perfil
   const handleImageUploaded = (imageUrl) => {
+    console.log(`ProfilePage: handleImageUploaded recibiendo URL: ${imageUrl}`);
     setFotoPerfil(imageUrl);
   };
 
@@ -157,6 +156,7 @@ const ProfilePage = () => {
       <Row>
         <Col md={4} className="text-center mb-4">
           <Image 
+            key={fotoPerfil}
             src={fotoPerfil || defaultProfileImage} 
             roundedCircle 
             width={150} 
