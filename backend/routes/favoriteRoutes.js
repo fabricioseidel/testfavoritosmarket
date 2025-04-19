@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
-// Asegúrate que importa desde el controlador correcto (el que tiene logs ⭐ y 💫)
-const favoriteController = require('../controllers/favoriteController');
+// --- CAMBIO TEMPORAL ---
+// Intentar importar el otro controlador, asumiendo que existe en el repo
+const favoriteController = require('../controllers/favoritesController'); // Cambiado de favoriteController a favoritesController
 
 // Ruta para obtener todos los favoritos del usuario (GET /api/favorites)
 router.get('/', auth, favoriteController.getFavorites);
