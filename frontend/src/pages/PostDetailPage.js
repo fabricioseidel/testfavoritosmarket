@@ -1,123 +1,149 @@
 import React, { useState, useEffect, useContext } from 'react';
-// Quitar Card de las importaciones si no se usa
-import { Container, Row, Col, Button, Badge, Spinner, Alert } from 'react-bootstrap';
-import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useParams, Link } from 'react-router-dom';
+import { Container, Row, Col, Card, Button, Spinner, Alert, Badge } from 'react-bootstrap';
+import { postService, favoriteService } from '../services/apiClient';
 import { UserContext } from '../context/UserContext';
-import { useCart } from '../context/CartContext';
+import { FaHeart, FaRegHeart } from 'react-icons/fa'; // Iconos para favoritos
 
 const PostDetailPage = () => {
+  const { id } = useParams();
+  const { user } = useContext(UserContext);
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { user } = useContext(UserContext);
-  const { addToCart } = useCart(); // Importamos la función para añadir al carrito
-  const [addedToCart, setAddedToCart] = useState(false); // Estado para mostrar mensaje de confirmación
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
   useEffect(() => {
     const fetchPost = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const response = await axios.get(`/api/posts/${id}`);
+        console.log(`PostDetailPage: Fetching post with id: ${id}`);
+        const response = await postService.getPostById(id);
+        console.log('PostDetailPage: API response received:', response);
         setPost(response.data);
-        setLoading(false);
+
+        // Si el usuario está logueado, verificar si es favorito
+        if (user && response.data) {
+          checkIfFavorite(response.data.id);
+        }
+
       } catch (err) {
-        setError('Error al cargar la publicación');
+        console.error('PostDetailPage: Error fetching post:', err.response?.data || err.message);
+        setError(err.response?.status === 404 ? 'Publicación no encontrada.' : 'Ocurrió un error al cargar la publicación.');
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchPost();
-  }, [id]);
+    const checkIfFavorite = async (postId) => {
+        setFavoriteLoading(true);
+        try {
+            console.log(`PostDetailPage: Checking favorite status for post id: ${postId}`);
+            const favResponse = await favoriteService.checkFavorite(postId);
+            console.log('PostDetailPage: Favorite check response:', favResponse);
+            setIsFavorite(favResponse.data.isFavorite);
+        } catch (favErr) {
+            // No mostrar error de favorito al usuario, solo loguear
+            console.error('PostDetailPage: Error checking favorite status:', favErr.response?.data || favErr.message);
+            // Podríamos asumir false si hay error, o dejarlo como estaba
+            // setIsFavorite(false);
+        } finally {
+            setFavoriteLoading(false);
+        }
+    };
 
-  // Función para añadir el producto al carrito
-  const handleAddToCart = () => {
-    if (post) {
-      const productToAdd = {
-        id: post.id,
-        title: post.titulo,
-        description: post.descripcion,
-        price: parseFloat(post.precio),
-        image: post.imagen,
-        quantity: 1
-      };
-      
-      addToCart(productToAdd);
-      setAddedToCart(true);
-      
-      // Ocultar el mensaje después de 3 segundos
-      setTimeout(() => {
-        setAddedToCart(false);
-      }, 3000);
+    fetchPost();
+  }, [id, user]); // Depender de 'id' y 'user'
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      // Opcional: redirigir a login o mostrar mensaje
+      alert('Debes iniciar sesión para añadir a favoritos.');
+      return;
+    }
+    if (!post || favoriteLoading) return;
+
+    setFavoriteLoading(true);
+    try {
+      console.log(`PostDetailPage: Toggling favorite for post id: ${post.id}`);
+      const response = await favoriteService.toggleFavorite(post.id);
+      console.log('PostDetailPage: Toggle favorite response:', response);
+      setIsFavorite(response.data.isFavorite); // Actualizar estado basado en la respuesta
+    } catch (err) {
+      console.error('PostDetailPage: Error toggling favorite:', err.response?.data || err.message);
+      setError('Error al actualizar favoritos.'); // Mostrar error al usuario
+    } finally {
+      setFavoriteLoading(false);
     }
   };
 
   if (loading) {
     return (
-      <Container className="text-center my-5">
+      <Container className="mt-5 text-center">
         <Spinner animation="border" role="status">
-          <span className="visually-hidden">Cargando...</span>
+          <span className="visually-hidden">Cargando publicación...</span>
         </Spinner>
       </Container>
     );
   }
 
   if (error) {
-    return (
-      <Container className="my-5">
-        <Alert variant="danger">{error}</Alert>
-      </Container>
-    );
+    return <Container className="mt-5"><Alert variant="danger">{error}</Alert></Container>;
   }
 
   if (!post) {
-    return (
-      <Container className="my-5">
-        <Alert variant="warning">Publicación no encontrada</Alert>
-      </Container>
-    );
+    // Esto no debería ocurrir si loading es false y no hay error, pero por si acaso
+    return <Container className="mt-5"><Alert variant="warning">No se encontró la publicación.</Alert></Container>;
   }
+
+  // Formatear precio
+  const formattedPrice = post.precio ? `$${post.precio.toLocaleString('es-CL')}` : 'Precio no disponible';
 
   return (
     <Container className="my-5">
-      {addedToCart && (
-        <Alert variant="success" className="mb-3">
-          ¡Producto añadido al carrito con éxito!
-        </Alert>
-      )}
-      
       <Row>
         <Col md={6}>
-          <img 
-            src={post.imagen} 
-            alt={post.titulo} 
-            className="img-fluid rounded"
-            style={{ maxHeight: '500px', objectFit: 'contain' }}
-          />
+          <Card>
+            <Card.Img variant="top" src={post.imagen || '/placeholder-image.png'} alt={post.titulo} style={{ maxHeight: '500px', objectFit: 'contain' }} />
+          </Card>
         </Col>
         <Col md={6}>
           <h1>{post.titulo}</h1>
-          <Badge bg="secondary" className="mb-3">{post.categoria}</Badge>
-          <h3 className="text-success">${parseFloat(post.precio).toFixed(2)}</h3>
-          <p className="my-4">{post.descripcion}</p>
-          
-          <div className="d-grid gap-2">
-            <Button 
-              variant="primary" 
-              size="lg"
-              onClick={handleAddToCart}
+          {post.categoria_nombre && (
+            <Badge bg="secondary" className="mb-2">{post.categoria_nombre}</Badge>
+          )}
+          <p className="lead">{post.descripcion}</p>
+          <h3 className="text-primary">{formattedPrice}</h3>
+          {post.usuario_nombre && (
+            <p className="text-muted">Publicado por: {post.usuario_nombre}</p>
+          )}
+          <p className="text-muted">
+            Publicado el: {new Date(post.fecha_creacion).toLocaleDateString('es-CL')}
+          </p>
+          {user && ( // Mostrar botón de favorito solo si el usuario está logueado
+            <Button
+              variant={isFavorite ? "danger" : "outline-danger"}
+              onClick={handleToggleFavorite}
+              disabled={favoriteLoading}
+              className="mb-3 d-flex align-items-center"
             >
-              🛒 Agregar al carrito
+              {favoriteLoading ? (
+                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+              ) : (
+                isFavorite ? <FaHeart className="me-2" /> : <FaRegHeart className="me-2" />
+              )}
+              {isFavorite ? 'Quitar de Favoritos' : 'Añadir a Favoritos'}
             </Button>
-            
-            <Button 
-              variant="outline-secondary"
-              onClick={() => navigate(-1)}
-            >
-              ⬅️ Volver
-            </Button>
-          </div>
+          )}
+           {/* Botón para añadir al carrito (si aplica) */}
+           {/* <Button variant="success">Añadir al Carrito</Button> */}
+
+           {/* Botón para volver */}
+           <Button variant="outline-secondary" as={Link} to="/" className="ms-2">
+             Volver al Inicio
+           </Button>
         </Col>
       </Row>
     </Container>

@@ -3,111 +3,117 @@ const pool = require('../db');
 // Obtener todas las categorías
 exports.getAllCategories = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM categorias ORDER BY nombre');
-    console.log(`Se encontraron ${result.rows.length} categorías`);
-    res.json(result.rows);
+    // --- IMPORTANTE ---
+    // Esta es una lista hardcodeada como solicitaste.
+    // Lo ideal es obtenerlas de la base de datos:
+    // const result = await pool.query('SELECT * FROM categorias ORDER BY nombre');
+    // res.json(result.rows);
+    // --- --- --- ---
+
+    // Lista de ejemplo para marketplace de ropa
+    const categories = [
+      { id: 1, nombre: 'Camisetas' },
+      { id: 2, nombre: 'Pantalones' },
+      { id: 3, nombre: 'Vestidos' },
+      { id: 4, nombre: 'Faldas' },
+      { id: 5, nombre: 'Chaquetas y Abrigos' },
+      { id: 6, nombre: 'Zapatos' },
+      { id: 7, nombre: 'Accesorios' },
+      { id: 8, nombre: 'Ropa Interior' },
+      { id: 9, nombre: 'Ropa Deportiva' },
+      { id: 10, nombre: 'Otros' } // Siempre es bueno tener una categoría genérica
+    ];
+    console.log("Enviando categorías hardcodeadas:", categories);
+    res.json(categories);
+
   } catch (err) {
-    console.error('Error al obtener categorías:', err);
-    res.status(500).json({ error: 'Error al obtener las categorías' });
+    console.error('Error al obtener categorías:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
-// Obtener una categoría específica por ID
+// Obtener una categoría por ID
 exports.getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
+    // Adaptar si se usa la lista hardcodeada o la base de datos
+    // Ejemplo con DB:
     const result = await pool.query('SELECT * FROM categorias WHERE id = $1', [id]);
-    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Categoría no encontrada' });
     }
-    
     res.json(result.rows[0]);
+    // Si usas la lista hardcodeada, tendrías que buscar en ella.
   } catch (err) {
-    console.error('Error al obtener la categoría:', err);
-    res.status(500).json({ error: 'Error al obtener la categoría' });
+    console.error('Error al obtener categoría por ID:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
-// Crear una nueva categoría (solo para administradores)
+// Crear una nueva categoría (requiere permisos de admin idealmente)
 exports.createCategory = async (req, res) => {
   try {
-    const { nombre, descripcion, imagen } = req.body;
-    
+    const { nombre } = req.body;
     if (!nombre) {
       return res.status(400).json({ error: 'El nombre de la categoría es obligatorio' });
     }
-    
     const result = await pool.query(
-      'INSERT INTO categorias (nombre, descripcion, imagen) VALUES ($1, $2, $3) RETURNING *',
-      [nombre, descripcion || '', imagen || '']
+      'INSERT INTO categorias (nombre) VALUES ($1) RETURNING *',
+      [nombre]
     );
-    
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error('Error al crear categoría:', err);
-    if (err.code === '23505') { // Unique violation
-      return res.status(400).json({ error: 'Ya existe una categoría con ese nombre' });
+    console.error('Error al crear categoría:', err.message);
+    // Manejar posible error de nombre duplicado (si hay constraint UNIQUE)
+    if (err.code === '23505') { // Código de error UNIQUE VIOLATION en PostgreSQL
+        return res.status(409).json({ error: 'Ya existe una categoría con ese nombre.' });
     }
-    res.status(500).json({ error: 'Error al crear la categoría' });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
-// Actualizar una categoría existente (solo para administradores)
+// Actualizar una categoría (requiere permisos de admin idealmente)
 exports.updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, descripcion, imagen } = req.body;
-    
+    const { nombre } = req.body;
     if (!nombre) {
       return res.status(400).json({ error: 'El nombre de la categoría es obligatorio' });
     }
-    
     const result = await pool.query(
-      'UPDATE categorias SET nombre = $1, descripcion = $2, imagen = $3 WHERE id = $4 RETURNING *',
-      [nombre, descripcion || '', imagen || '', id]
+      'UPDATE categorias SET nombre = $1 WHERE id = $2 RETURNING *',
+      [nombre, id]
     );
-    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Categoría no encontrada' });
     }
-    
     res.json(result.rows[0]);
   } catch (err) {
-    console.error('Error al actualizar categoría:', err);
-    if (err.code === '23505') { // Unique violation
-      return res.status(400).json({ error: 'Ya existe una categoría con ese nombre' });
+    console.error('Error al actualizar categoría:', err.message);
+     if (err.code === '23505') {
+        return res.status(409).json({ error: 'Ya existe otra categoría con ese nombre.' });
     }
-    res.status(500).json({ error: 'Error al actualizar la categoría' });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
-// Eliminar una categoría (solo para administradores)
+// Eliminar una categoría (requiere permisos de admin idealmente)
 exports.deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    
     // Verificar si hay publicaciones usando esta categoría
-    const checkPosts = await pool.query(
-      'SELECT COUNT(*) FROM publicaciones WHERE categoria_id = $1',
-      [id]
-    );
-    
-    if (parseInt(checkPosts.rows[0].count) > 0) {
-      return res.status(400).json({ 
-        error: 'No se puede eliminar la categoría porque hay publicaciones asociadas a ella' 
-      });
+    const checkPosts = await pool.query('SELECT id FROM publicaciones WHERE categoria_id = $1 LIMIT 1', [id]);
+    if (checkPosts.rows.length > 0) {
+        return res.status(409).json({ error: 'No se puede eliminar la categoría porque está siendo usada por publicaciones.' });
     }
-    
-    const result = await pool.query('DELETE FROM categorias WHERE id = $1 RETURNING *', [id]);
-    
-    if (result.rows.length === 0) {
+
+    const result = await pool.query('DELETE FROM categorias WHERE id = $1 RETURNING id', [id]);
+    if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Categoría no encontrada' });
     }
-    
-    res.json({ message: 'Categoría eliminada correctamente' });
+    res.json({ message: 'Categoría eliminada exitosamente' });
   } catch (err) {
-    console.error('Error al eliminar categoría:', err);
-    res.status(500).json({ error: 'Error al eliminar la categoría' });
+    console.error('Error al eliminar categoría:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

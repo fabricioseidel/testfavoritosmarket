@@ -21,7 +21,7 @@ export const API_ROUTES = {
   FAVORITES: {
     TOGGLE: '/favorites',
     GET_ALL: '/favorites',
-    CHECK: '/favorites/check'
+    CHECK: (postId) => `/favorites/check/${postId}`
   },
   CATEGORIES: {
     GET_ALL: '/categories'
