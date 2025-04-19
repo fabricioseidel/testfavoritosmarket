@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import apiClient from '../services/apiClient'; // Importar apiClient
-import { getProfile } from '../services/api'; // Importar getProfile
 
 export const UserContext = createContext();
 
@@ -63,9 +62,9 @@ export const UserProvider = ({ children }) => {
         // Configurar el header de autorización temporalmente para esta llamada
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-        // Llamar a una ruta protegida, como getProfile
-        await getProfile();
-        console.log('✅ Token validado exitosamente con /api/profile');
+        // Llamar a una ruta protegida, como getProfile (usando apiClient directamente o authService)
+        await apiClient.get('/auth/profile'); // Usar la ruta correcta definida en API_ROUTES
+        console.log('✅ Token validado exitosamente con /api/auth/profile');
         setLoading(false); // Token válido, terminar carga
 
       } catch (error) {
