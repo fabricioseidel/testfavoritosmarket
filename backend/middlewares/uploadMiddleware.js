@@ -1,44 +1,8 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
 
-// Crear directorio de uploads si no existe
-const uploadDir = process.env.NODE_ENV === 'production'
-  ? path.join('/tmp/uploads') // Para entornos como Render que usan /tmp
-  : path.join(__dirname, '../public/uploads');
-
-if (!fs.existsSync(uploadDir)) {
-  try {
-    fs.mkdirSync(uploadDir, { recursive: true });
-    console.log(`Directorio de uploads creado en: ${uploadDir}`);
-  } catch (error) {
-    console.error(`Error al crear directorio de uploads: ${error.message}`);
-  }
-}
-
-// Configurar almacenamiento
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // Verificar si el directorio existe y se pueden escribir archivos
-    fs.access(uploadDir, fs.constants.W_OK, (err) => {
-      if (err) {
-        return cb(new Error(`No se puede escribir en el directorio de uploads: ${err.message}`));
-      }
-      cb(null, uploadDir);
-    });
-  },
-  filename: function (req, file, cb) {
-    // Generar nombre único y seguro usando crypto
-    const randomName = crypto.randomBytes(16).toString('hex');
-    const sanitizedOriginalName = path.basename(file.originalname).replace(/[^a-zA-Z0-9.]/g, '_');
-    const extension = path.extname(sanitizedOriginalName).toLowerCase();
-    const newFilename = `${randomName}${extension}`;
-    
-    console.log(`Guardando archivo '${sanitizedOriginalName}' como: ${newFilename}`);
-    cb(null, newFilename);
-  }
-});
+// --- CAMBIO: Usar almacenamiento en memoria ---
+const storage = multer.memoryStorage();
 
 // Filtrar archivos (solo imágenes)
 const fileFilter = (req, file, cb) => {
@@ -60,8 +24,8 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-// Crear el middleware de carga
-const upload = multer({ 
+// Crear el middleware de carga con memoryStorage
+const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {

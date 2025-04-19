@@ -51,9 +51,6 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser()); // Añadir middleware para procesar cookies
 
-// Configurar carpeta de uploads como directorio estático
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 // Agregar un middleware para depuración de rutas
 app.use((req, res, next) => {
   console.log(`📝 ${req.method} ${req.url}`);
@@ -78,20 +75,6 @@ pool.query('SELECT NOW()', (err, res) => {
     console.log('Conexión exitosa a la base de datos:', res.rows[0]);
   }
 });
-
-// Crear directorio para uploads si no existe
-const uploadPath = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadPath)) {
-  fs.mkdirSync(uploadPath, { recursive: true });
-  console.log(`Directorio de uploads creado en: ${uploadPath}`);
-}
-
-// Middleware para servir archivos estáticos con encabezados adecuados
-app.use('/uploads', (req, res, next) => {
-  // Añadir cache control para imágenes
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-  next();
-}, express.static(path.join(__dirname, 'uploads')));
 
 // ===================== RUTAS DE LA API =====================
 // Configurar todas las rutas de la API
