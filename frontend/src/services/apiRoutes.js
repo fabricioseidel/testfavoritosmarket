@@ -29,8 +29,8 @@ export const API_ROUTES = {
   CHECK_FAVORITE: (postId) => `/favorites/check/${postId}`, // GET request
 
   // Image Upload
-  UPLOAD_IMAGE: '/upload', // Ruta para subir imágenes (ajusta si es diferente)
-  UPLOAD_IMAGE_REGISTRATION: '/upload/register', // Ruta específica para registro si existe
+  UPLOAD_IMAGE: '/upload/image', // Ruta para subir imágenes autenticadas
+  UPLOAD_IMAGE_REGISTRATION: '/upload/registration-image', // Ruta específica para registro
 
   // Users (si necesitas obtener datos públicos de otros usuarios)
   GET_USER_BY_ID: (id) => `/users/${id}`,
