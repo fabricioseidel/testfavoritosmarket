@@ -3,29 +3,12 @@ const pool = require('../db');
 // Obtener todas las categorías
 exports.getAllCategories = async (req, res) => {
   try {
-    // --- IMPORTANTE ---
-    // Esta es una lista hardcodeada como solicitaste.
-    // Lo ideal es obtenerlas de la base de datos:
-    // const result = await pool.query('SELECT * FROM categorias ORDER BY nombre');
-    // res.json(result.rows);
+    // --- IMPORTANTE: Leer desde la base de datos ---
+    console.log("Obteniendo categorías desde la base de datos...");
+    const result = await pool.query('SELECT * FROM categorias ORDER BY nombre');
+    console.log(`Enviando ${result.rows.length} categorías desde la BD.`);
+    res.json(result.rows);
     // --- --- --- ---
-
-    // Lista de ejemplo para marketplace de ropa
-    const categories = [
-      { id: 1, nombre: 'Camisetas' },
-      { id: 2, nombre: 'Pantalones' },
-      { id: 3, nombre: 'Vestidos' },
-      { id: 4, nombre: 'Faldas' },
-      { id: 5, nombre: 'Chaquetas y Abrigos' },
-      { id: 6, nombre: 'Zapatos' },
-      { id: 7, nombre: 'Accesorios' },
-      { id: 8, nombre: 'Ropa Interior' },
-      { id: 9, nombre: 'Ropa Deportiva' },
-      { id: 10, nombre: 'Otros' } // Siempre es bueno tener una categoría genérica
-    ];
-    console.log("Enviando categorías hardcodeadas:", categories);
-    res.json(categories);
-
   } catch (err) {
     console.error('Error al obtener categorías:', err.message);
     res.status(500).json({ error: 'Error interno del servidor' });

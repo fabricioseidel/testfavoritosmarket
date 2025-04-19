@@ -14,6 +14,7 @@ const userRoutes = require('./routes/userRoutes');
 const postRoutes = require('./routes/postRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const { createTables, seedCategories } = require('./db/migrations'); // Importar ambas
 
 // Verificar si JWT_SECRET está configurado
 if (!process.env.JWT_SECRET) {
@@ -67,15 +68,6 @@ app.use('/api/favorites', (req, res, next) => {
   next();
 });
 
-// Prueba de conexión a la base de datos
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('Error al conectar a la base de datos:', err);
-  } else {
-    console.log('Conexión exitosa a la base de datos:', res.rows[0]);
-  }
-});
-
 // ===================== RUTAS DE LA API =====================
 // Configurar todas las rutas de la API
 app.use('/api/auth', authRoutes);
@@ -113,15 +105,28 @@ app.use('*', (req, res) => {
   });
 });
 
-// Importar y ejecutar migraciones
-const runMigrations = require('./db-migrate');
+// --- Inicio del Servidor ---
+const startServer = async () => {
+  try {
+    // 1. Verificar conexión a BD
+    const dbCheck = await pool.query('SELECT NOW()');
+    console.log('✅ Conexión a la base de datos establecida correctamente:', dbCheck.rows[0]);
 
-// Migraciones y luego iniciar el servidor
-runMigrations().then(() => {
-  // Use PORT from environment variable provided by Render or default to 5000
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
-}).catch(err => {
-  console.error('❌ Error al iniciar la aplicación:', err);
-  process.exit(1); // Salir si las migraciones fallan
-});
+    // 2. Ejecutar migraciones para crear tablas
+    await createTables();
+
+    // 3. Poblar categorías por defecto (DESPUÉS de crear tablas)
+    await seedCategories();
+
+    // 4. Iniciar el servidor Express
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('❌ Error fatal al iniciar el servidor:', error);
+    process.exit(1); // Salir si hay un error crítico al inicio
+  }
+};
+
+startServer();
