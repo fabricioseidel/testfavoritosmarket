@@ -1,29 +1,28 @@
 import axios from 'axios';
-import { API_ROUTES } from './apiRoutes';
-import appConfig from '../config/appConfig';
+import { API_BASE_URL, API_ROUTES } from './apiRoutes';
 
-// Crear una instancia de axios con configuración base
+// Crear instancia de Axios
 const apiClient = axios.create({
-  baseURL: appConfig.api.baseUrl,
-  timeout: appConfig.api.timeout,
+  baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
-// Interceptor para añadir token de autenticación en cada solicitud
+// Interceptor para añadir el token JWT a las solicitudes
 apiClient.interceptors.request.use(
   (config) => {
-    // Leer el token del usuario del localStorage
-    const userStr = localStorage.getItem(appConfig.auth.tokenStorageKey);
-    if (userStr) {
+    const userString = localStorage.getItem('user');
+    if (userString) {
       try {
-        const user = JSON.parse(userStr);
+        const user = JSON.parse(userString);
         if (user && user.token) {
           config.headers['Authorization'] = `Bearer ${user.token}`;
+          console.log('Token añadido a la cabecera:', `Bearer ${user.token.substring(0, 10)}...`);
         }
-      } catch (error) {
-        console.error('Error parsing user data from localStorage:', error);
+      } catch (e) {
+        console.error("Error parsing user from localStorage", e);
+        localStorage.removeItem('user'); // Limpiar si está corrupto
       }
     }
     return config;
@@ -33,123 +32,60 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Interceptor para manejar respuestas y errores de forma centralizada
-apiClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    // Manejar errores comunes (401, 403, 500, etc.)
-    if (error.response) {
-      // Error del servidor con respuesta
-      const status = error.response.status;
-      
-      if (status === 401) {
-        // Error de autenticación - redirigir al login
-        console.warn('Sesión expirada o no válida');
-        // Limpiar datos de usuario si el token es inválido
-        localStorage.removeItem('user');
-        
-        // Opcional: Redirigir al login
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login?expired=true';
-        }
-      }
-      
-      if (status === 403) {
-        console.warn('Acceso prohibido');
-      }
-      
-      if (status === 500) {
-        console.error('Error interno del servidor');
-      }
-    } else if (error.request) {
-      // La solicitud se hizo pero no se recibió respuesta
-      console.error('No se recibió respuesta del servidor');
-    } else {
-      // Error en la configuración de la solicitud
-      console.error('Error en la configuración de la solicitud:', error.message);
-    }
-    
-    return Promise.reject(error);
-  }
-);
+// --- Definición de Servicios ---
 
-// Servicio de autenticación
+// Servicio de Autenticación
 export const authService = {
-  login: (credentials) => apiClient.post(API_ROUTES.AUTH.LOGIN, credentials),
-  register: (userData) => apiClient.post(API_ROUTES.AUTH.REGISTER, userData),
-  getProfile: () => apiClient.get(API_ROUTES.AUTH.PROFILE),
-  updateProfile: (data) => apiClient.put(API_ROUTES.AUTH.PROFILE, data),
-  logout: () => apiClient.post(API_ROUTES.AUTH.LOGOUT)
+  register: (userData) => apiClient.post(API_ROUTES.REGISTER, userData),
+  login: (credentials) => apiClient.post(API_ROUTES.LOGIN, credentials),
+  logout: () => apiClient.post(API_ROUTES.LOGOUT),
+  getProfile: () => apiClient.get(API_ROUTES.PROFILE),
+  updateProfile: (profileData) => apiClient.put(API_ROUTES.UPDATE_PROFILE, profileData),
 };
 
-// Servicio de publicaciones
+// Servicio de Publicaciones
 export const postService = {
-  getAllPosts: () => apiClient.get(API_ROUTES.POSTS.GET_ALL),
-  getPostById: (id) => apiClient.get(`${API_ROUTES.POSTS.GET_BY_ID}/${id}`),
-  createPost: (postData) => apiClient.post(API_ROUTES.POSTS.CREATE, postData),
-  updatePost: (id, postData) => apiClient.put(`${API_ROUTES.POSTS.UPDATE}/${id}`, postData),
-  deletePost: (id) => apiClient.delete(`${API_ROUTES.POSTS.DELETE}/${id}`),
-  getUserPosts: () => apiClient.get(API_ROUTES.POSTS.USER_POSTS),
-  searchPosts: (query) => apiClient.get(`${API_ROUTES.POSTS.SEARCH}?q=${encodeURIComponent(query)}`)
+  getAllPosts: (config) => apiClient.get(API_ROUTES.GET_ALL_POSTS, config),
+  getPostById: (id) => apiClient.get(API_ROUTES.GET_POST_BY_ID(id)),
+  createPost: (postData) => apiClient.post(API_ROUTES.CREATE_POST, postData),
+  updatePost: (id, postData) => apiClient.put(API_ROUTES.UPDATE_POST(id), postData),
+  deletePost: (id) => apiClient.delete(API_ROUTES.DELETE_POST(id)),
+  getUserPosts: (config) => apiClient.get(API_ROUTES.GET_USER_POSTS, config),
+  searchPosts: (query, config) => apiClient.get(API_ROUTES.SEARCH_POSTS, { params: { q: query }, ...config }),
+  claimPost: (postId) => apiClient.put(API_ROUTES.CLAIM_POST(postId)),
 };
 
-// Servicio de favoritos
-export const favoriteService = {
-  // Obtener todos los posts favoritos del usuario
-  getFavorites: () => {
-    console.log('apiClient: Llamando a getFavorites (GET)', API_ROUTES.FAVORITES.GET_ALL);
-    return apiClient.get(API_ROUTES.FAVORITES.GET_ALL);
-  },
-  // Añadir o quitar un post de favoritos
-  toggleFavorite: (postId) => {
-    console.log('apiClient: Llamando a toggleFavorite (POST)', API_ROUTES.FAVORITES.TOGGLE, { publicacion_id: postId });
-    // El backend espera 'publicacion_id' en el body
-    return apiClient.post(API_ROUTES.FAVORITES.TOGGLE, { publicacion_id: postId });
-  },
-  // Verificar si un post es favorito
-  checkFavorite: (postId) => {
-    const url = API_ROUTES.FAVORITES.CHECK(postId); // Llamar a la función para obtener la URL
-    console.log('apiClient: Llamando a checkFavorite (GET)', url);
-    return apiClient.get(url);
-  }
-};
-
-// Servicio de categorías
+// Servicio de Categorías
 export const categoryService = {
-  getAllCategories: () => apiClient.get(API_ROUTES.CATEGORIES.GET_ALL)
+  getAllCategories: (config) => apiClient.get(API_ROUTES.GET_ALL_CATEGORIES, config),
+  getCategoryById: (id) => apiClient.get(API_ROUTES.GET_CATEGORY_BY_ID(id)),
+  // create, update, delete (si son necesarios y tienes permisos)
 };
 
-// Servicio de carga de archivos
+// Servicio de Favoritos
+export const favoriteService = {
+  getFavorites: () => apiClient.get(API_ROUTES.GET_FAVORITES),
+  // toggleFavorite espera el ID en el body
+  toggleFavorite: (postId) => apiClient.post(API_ROUTES.TOGGLE_FAVORITE, { publicacion_id: postId }),
+  // checkFavorite usa el ID en la URL
+  checkFavorite: (postId) => apiClient.get(API_ROUTES.CHECK_FAVORITE(postId)),
+};
+
+// Servicio de Subida de Imágenes
 export const uploadService = {
-  uploadImage: (formData, onProgress) => {
-    return apiClient.post(API_ROUTES.UPLOAD.IMAGE, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percentCompleted);
-        }
-      }
-    });
-  },
-  
-  uploadRegistrationImage: (formData, onProgress) => {
-    return apiClient.post(API_ROUTES.UPLOAD.REGISTRATION_IMAGE, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percentCompleted);
-        }
-      }
-    });
-  }
+  uploadImage: (formData) => apiClient.post(API_ROUTES.UPLOAD_IMAGE, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  uploadImageRegistration: (formData) => apiClient.post(API_ROUTES.UPLOAD_IMAGE_REGISTRATION, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
 
-export default apiClient;
+// Servicio de Usuarios (si es necesario)
+export const userService = {
+    getUserById: (id) => apiClient.get(API_ROUTES.GET_USER_BY_ID(id)),
+    // Podrías añadir aquí getProfile, updateProfile si prefieres tenerlo separado de authService
+};
+
+
+export default apiClient; // Exportar la instancia configurada por si se necesita directamente

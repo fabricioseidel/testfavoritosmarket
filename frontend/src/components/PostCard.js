@@ -58,9 +58,17 @@ const PostCard = ({ id, title, price, description, image, onFavorite, onClaim })
   }, [cart, id]);
   
   useEffect(() => {
-    if (!user || checkingFavorite) return;
+    if (!user || !id || checkingFavorite) {
+        if (!user) setIsFavorite(false);
+        return;
+    }
 
     const checkFavoriteStatus = async () => {
+      if (!id || typeof id !== 'number' || isNaN(id)) {
+          console.warn(`PostCard (${id}): Invalid ID provided for favorite check.`);
+          return;
+      }
+
       setCheckingFavorite(true);
       console.log(`PostCard (${id}): Checking favorite status...`);
       try {
@@ -75,13 +83,14 @@ const PostCard = ({ id, title, price, description, image, onFavorite, onClaim })
         }
       } catch (error) {
         console.error(`PostCard (${id}): Error checking favorite status:`, error.response?.data || error.message);
+        setIsFavorite(false);
       } finally {
         setCheckingFavorite(false);
       }
     };
 
     checkFavoriteStatus();
-  }, [id, user, checkingFavorite]);
+  }, [id, user]);
 
   const toggleFavoriteHandler = async (e) => {
     e.stopPropagation();
