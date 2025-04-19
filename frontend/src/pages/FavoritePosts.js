@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { Container, Row, Col, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { UserContext } from '../context/UserContext';
 import PostCard from '../components/PostCard';
-import axios from 'axios';
+import { favoriteService } from '../services/apiClient';
 
 const FavoritePosts = () => {
   const { user } = useContext(UserContext);
@@ -10,40 +10,52 @@ const FavoritePosts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Usar useCallback para la función fetchFavorites
   const fetchFavorites = useCallback(async () => {
     if (!user?.token) {
-      setError('Debes iniciar sesión para ver tus favoritos');
+      setError('Debes iniciar sesión para ver tus favoritos.');
       setLoading(false);
+      setFavorites([]);
       return;
     }
 
+    setLoading(true);
+    setError(null);
     try {
-      const response = await axios.get('/api/favorites', {
-        headers: {
-          Authorization: `Bearer ${user.token}`
-        }
-      });
-      setFavorites(response.data);
-      setError(null);
+      console.log('FavoritePosts: Fetching favorites...');
+      const response = await favoriteService.getFavorites();
+      console.log('FavoritePosts: API response received:', response);
+
+      if (response && Array.isArray(response.data)) {
+        setFavorites(response.data);
+        console.log('FavoritePosts: Favorites state updated with', response.data.length, 'items.');
+      } else {
+        console.warn('FavoritePosts: API did not return an array in response.data. Setting favorites to []. Response:', response);
+        setError('Respuesta inesperada del servidor al cargar favoritos.');
+        setFavorites([]);
+      }
     } catch (err) {
-      console.error('Error al obtener favoritos:', err);
-      setError('Ocurrió un error al cargar tus favoritos');
+      console.error('FavoritePosts: Error fetching favorites:', err.response?.data || err.message);
+      setError(err.response?.data?.error || 'Ocurrió un error al cargar tus favoritos.');
+      setFavorites([]);
     } finally {
       setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    fetchFavorites();
-  }, [fetchFavorites]); // Ahora fetchFavorites es estable con useCallback
+    if (user) {
+      fetchFavorites();
+    } else {
+      setLoading(false);
+      setFavorites([]);
+      setError('Debes iniciar sesión para ver tus favoritos.');
+    }
+  }, [user, fetchFavorites]);
 
-  // Función para manejar la eliminación de favoritos en tiempo real
   const handleFavoriteToggle = (postId, isFavorite) => {
     console.log(`Favorito cambiado: postId=${postId}, isFavorite=${isFavorite}`);
     
     if (!isFavorite) {
-      // Si se desmarcó como favorito, eliminar de la lista local
       setFavorites(prevFavorites => 
         prevFavorites.filter(fav => fav.publicacion_id !== postId)
       );
@@ -51,40 +63,44 @@ const FavoritePosts = () => {
   };
 
   if (loading) {
-    return <Container className="mt-5 text-center"><p>Cargando favoritos...</p></Container>;
-  }
-
-  if (error) {
-    return <Container className="mt-5"><Alert variant="danger">{error}</Alert></Container>;
-  }
-
-  if (favorites.length === 0) {
     return (
-      <Container className="mt-5">
-        <Alert variant="info">
-          No tienes publicaciones favoritas. Explora la galería para añadir favoritos.
-        </Alert>
+      <Container className="mt-5 text-center">
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Cargando favoritos...</span>
+        </Spinner>
       </Container>
     );
   }
 
+  if (error && !user) {
+    return <Container className="mt-5"><Alert variant="warning">{error}</Alert></Container>;
+  }
+
+  if (error && user) {
+    return <Container className="mt-5"><Alert variant="danger">{error}</Alert></Container>;
+  }
+
   return (
-    <Container className="mt-5">
-      <h1 className="mb-4">Mis Favoritos</h1>
-      <Row>
-        {favorites.map(favorite => (
-          <Col key={`favorite-${favorite.publicacion_id}`} xs={12} sm={6} md={4} lg={3}>
-            <PostCard
-              id={favorite.publicacion_id}
-              title={favorite.titulo}
-              description={favorite.descripcion}
-              price={parseFloat(favorite.precio)}
-              image={favorite.imagen}
-              onFavorite={handleFavoriteToggle}
-            />
-          </Col>
-        ))}
-      </Row>
+    <Container className="my-5">
+      <h1>Mis Favoritos</h1>
+      {favorites.length === 0 ? (
+        <Alert variant="info">Aún no tienes publicaciones favoritas.</Alert>
+      ) : (
+        <Row>
+          {favorites.map(fav => (
+            <Col key={fav.id || fav.publicacion_id} xs={12} sm={6} md={4} lg={3} className="mb-4">
+              <PostCard
+                id={fav.id}
+                title={fav.titulo}
+                description={fav.descripcion}
+                price={parseFloat(fav.precio)}
+                image={fav.imagen}
+                onFavorite={handleFavoriteToggle}
+              />
+            </Col>
+          ))}
+        </Row>
+      )}
     </Container>
   );
 };

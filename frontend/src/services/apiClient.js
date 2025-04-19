@@ -97,9 +97,23 @@ export const postService = {
 
 // Servicio de favoritos
 export const favoriteService = {
-  toggleFavorite: (postId) => apiClient.post(API_ROUTES.FAVORITES.TOGGLE, { publicacion_id: postId }),
-  getFavorites: () => apiClient.get(API_ROUTES.FAVORITES.GET_ALL),
-  checkFavorite: (postId) => apiClient.get(`${API_ROUTES.FAVORITES.CHECK}/${postId}`)
+  // Obtener todos los posts favoritos del usuario
+  getFavorites: () => {
+    console.log('apiClient: Llamando a getFavorites (GET)', API_ROUTES.FAVORITES.GET_ALL);
+    return apiClient.get(API_ROUTES.FAVORITES.GET_ALL);
+  },
+  // Añadir o quitar un post de favoritos
+  toggleFavorite: (postId) => {
+    console.log('apiClient: Llamando a toggleFavorite (POST)', API_ROUTES.FAVORITES.TOGGLE, { publicacion_id: postId });
+    // El backend espera 'publicacion_id' en el body
+    return apiClient.post(API_ROUTES.FAVORITES.TOGGLE, { publicacion_id: postId });
+  },
+  // Verificar si un post es favorito
+  checkFavorite: (postId) => {
+    const url = API_ROUTES.FAVORITES.CHECK(postId);
+    console.log('apiClient: Llamando a checkFavorite (GET)', url);
+    return apiClient.get(url);
+  }
 };
 
 // Servicio de categorías

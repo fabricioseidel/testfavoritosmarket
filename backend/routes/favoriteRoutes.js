@@ -1,21 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const favoriteController = require('../controllers/favoriteController');
 const auth = require('../middleware/authMiddleware');
+// Asegúrate que importa desde el controlador correcto (el que tiene logs ⭐ y 💫)
+const favoriteController = require('../controllers/favoriteController');
 
-// Middleware de depuración para verificar la cadena
-const verifyAuthData = (req, res, next) => {
-  console.log('📊 Route middleware - Verificando datos de autenticación');
-  console.log('📊 req.user presente:', !!req.user);
-  if (req.user) {
-    console.log('📊 req.user.id:', req.user.id);
-  }
-  next();
-};
+// Ruta para obtener todos los favoritos del usuario (GET /api/favorites)
+router.get('/', auth, favoriteController.getFavorites);
 
-// Aplicar cadena de middlewares en orden correcto
-router.post('/', auth, verifyAuthData, favoriteController.toggleFavorite);
-router.get('/', auth, verifyAuthData, favoriteController.getFavorites);
-router.get('/check/:postId', auth, verifyAuthData, favoriteController.checkFavorite);
+// Ruta para alternar un favorito (POST /api/favorites)
+// Cambiado para que coincida con la implementación de toggleFavorite que espera publicacion_id en el body
+router.post('/', auth, favoriteController.toggleFavorite);
+
+// Ruta para verificar si un post es favorito (GET /api/favorites/check/:postId)
+// Asegúrate que el parámetro se llama postId como en el controlador checkFavorite
+router.get('/check/:postId', auth, favoriteController.checkFavorite);
 
 module.exports = router;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
-import { Button, Badge } from 'react-bootstrap';
+import { Button, Badge, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 import { useCart } from '../context/CartContext';
@@ -46,6 +46,7 @@ const ProductImage = styled.img`
 
 const PostCard = ({ id, title, price, description, image, onFavorite, onClaim }) => {
   const [isFavorite, setIsFavorite] = useState(false);
+  const [checkingFavorite, setCheckingFavorite] = useState(false);
   const [isInCart, setIsInCart] = useState(false);
   const { user } = useContext(UserContext);
   const { cart, addToCart, removeFromCart } = useCart();
@@ -57,19 +58,30 @@ const PostCard = ({ id, title, price, description, image, onFavorite, onClaim })
   }, [cart, id]);
   
   useEffect(() => {
-    if (!user) return;
+    if (!user || checkingFavorite) return;
 
     const checkFavoriteStatus = async () => {
+      setCheckingFavorite(true);
+      console.log(`PostCard (${id}): Checking favorite status...`);
       try {
         const response = await favoriteService.checkFavorite(id);
-        setIsFavorite(response.data.isFavorite);
+        console.log(`PostCard (${id}): checkFavorite response:`, response.data);
+        if (response.data && typeof response.data.isFavorite === 'boolean') {
+          setIsFavorite(response.data.isFavorite);
+          console.log(`PostCard (${id}): Status set to ${response.data.isFavorite}`);
+        } else {
+          console.warn(`PostCard (${id}): Invalid response from checkFavorite`, response.data);
+          setIsFavorite(false);
+        }
       } catch (error) {
-        console.error('Error al verificar favorito:', error.response?.data?.error || error.message);
+        console.error(`PostCard (${id}): Error checking favorite status:`, error.response?.data || error.message);
+      } finally {
+        setCheckingFavorite(false);
       }
     };
 
     checkFavoriteStatus();
-  }, [id, user]);
+  }, [id, user, checkingFavorite]);
 
   const toggleFavoriteHandler = async (e) => {
     e.stopPropagation();
@@ -178,25 +190,28 @@ const PostCard = ({ id, title, price, description, image, onFavorite, onClaim })
       <h3>{title}</h3>
       <p>{description.length > 100 ? `${description.substring(0, 100)}...` : description}</p>
       <p><strong>Precio:</strong> ${price}</p>
-      <div className="d-flex gap-2 flex-wrap">
-        <Button variant="outline-primary" onClick={() => navigate(`/post/${id}`)}>
+      <div className="d-flex gap-2 flex-wrap mt-auto pt-3">
+        <Button variant="outline-primary" size="sm" onClick={() => navigate(`/post/${id}`)}>
           Ver Detalle
         </Button>
         
         <Button 
-          variant={isInCart ? "success" : "primary"}
+          variant={isInCart ? "outline-success" : "success"}
+          size="sm"
           onClick={handleCartAction}
         >
-          {isInCart ? '✓ En Carrito' : '🛒 Añadir al carrito'}
+          {isInCart ? '✓ En Carrito' : '🛒 Añadir'}
         </Button>
         
         {user && (
           <Button
             variant={isFavorite ? "warning" : "outline-warning"}
+            size="sm"
             onClick={toggleFavoriteHandler}
+            disabled={checkingFavorite}
             className={isFavorite ? "favorite-active" : ""}
           >
-            {isFavorite ? '💖 Favorito' : '🤍 Favorito'}
+            {checkingFavorite ? <Spinner as="span" animation="border" size="sm" /> : (isFavorite ? '💖' : '🤍')}
           </Button>
         )}
         
