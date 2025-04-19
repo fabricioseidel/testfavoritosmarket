@@ -3,8 +3,7 @@ import { Container, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import PostCard from '../components/PostCard';
 import { UserContext } from '../context/UserContext';
 import { useCart } from '../context/CartContext';
-import { getPosts, claimPost } from '../services/api';
-import apiClient from '../services/apiClient';
+import { postService } from '../services/apiClient'; // Importar postService
 
 const HomePage = () => {
   const [posts, setPosts] = useState([]);
@@ -21,7 +20,7 @@ const HomePage = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await apiClient.get('/posts', { signal });
+        const response = await postService.getAllPosts({ signal });
 
         if (Array.isArray(response.data)) {
           setPosts(response.data);
@@ -39,7 +38,9 @@ const HomePage = () => {
           setPosts([]);
         }
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -53,11 +54,12 @@ const HomePage = () => {
   const handleClaimPost = async (postId) => {
     if (!user) {
       console.error('Usuario no autenticado');
+      alert('Debes iniciar sesión para reclamar.');
       return;
     }
 
     try {
-      await claimPost(postId);
+      await postService.claimPost(postId);
       setPosts(prevPosts =>
         prevPosts.map(post =>
           post.id === postId
@@ -65,8 +67,10 @@ const HomePage = () => {
             : post
         )
       );
+      alert('Publicación reclamada con éxito');
     } catch (error) {
-      console.error('Error actualizando lista después de reclamar:', error);
+      console.error('Error al reclamar publicación:', error.response?.data || error.message);
+      alert(error.response?.data?.error || 'Error al reclamar la publicación.');
     }
   };
 

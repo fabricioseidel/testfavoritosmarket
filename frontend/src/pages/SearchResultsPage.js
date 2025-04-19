@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Alert, Button, Form, ButtonGroup, Spinner } from 'react-bootstrap'; // Añadir Spinner
+import { Container, Row, Col, Alert, Button, Form, ButtonGroup, Spinner } from 'react-bootstrap';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import PostCard from '../components/PostCard';
-import { searchPosts } from '../services/api'; // Importar función de búsqueda
-import apiClient from '../services/apiClient'; // Importar apiClient para AbortController
+import { postService } from '../services/apiClient'; // Importar postService
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import { FaSearch, FaThList, FaThLarge } from 'react-icons/fa';
@@ -30,6 +29,7 @@ const SearchResultsPage = () => {
   const [error, setError] = useState(null);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+  const [abortController, setAbortController] = useState(null); // Para cancelar peticiones
 
   const query = searchParams.get('q');
 
@@ -44,14 +44,21 @@ const SearchResultsPage = () => {
       return;
     }
 
+    // Cancelar petición anterior si existe
+    if (abortController) {
+      abortController.abort();
+    }
+
     const controller = new AbortController();
+    setAbortController(controller); // Guardar nuevo controlador
     const signal = controller.signal;
 
     const fetchResults = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await apiClient.get(`/posts/search?q=${encodeURIComponent(query)}`, { signal });
+        // Usar postService.searchPosts
+        const response = await postService.searchPosts(query, { signal }); // Pasar signal
 
         if (Array.isArray(response.data)) {
           setResults(response.data);
@@ -69,14 +76,17 @@ const SearchResultsPage = () => {
           setResults([]);
         }
       } finally {
-        setLoading(false);
+        // Solo poner loading false si esta petición no fue cancelada
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchResults();
 
     return () => {
-      controller.abort();
+      controller.abort(); // Cancelar al desmontar o cambiar query
     };
   }, [query]);
 

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Form } from 'react-bootstrap';
-import PropTypes from 'prop-types';
 import { categoryService } from '../services/apiClient';
-import apiClient from '../services/apiClient';
 
 const CategorySelector = ({ value, onChange, name = "categoria_id", label = "Categoría", required = false }) => {
   const [categories, setCategories] = useState([]);
@@ -17,7 +15,7 @@ const CategorySelector = ({ value, onChange, name = "categoria_id", label = "Cat
       setLoading(true);
       setError(null);
       try {
-        const response = await apiClient.get('/categories', { signal });
+        const response = await categoryService.getAllCategories({ signal });
 
         if (Array.isArray(response.data)) {
           setCategories(response.data);
@@ -36,7 +34,9 @@ const CategorySelector = ({ value, onChange, name = "categoria_id", label = "Cat
           setCategories([]);
         }
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 

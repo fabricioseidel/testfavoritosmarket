@@ -3,7 +3,7 @@ import { Container, Row, Col, Alert, Spinner, Button } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 import PostCard from '../components/PostCard';
-import axios from 'axios';
+import { postService } from '../services/apiClient'; // Importar postService
 
 const MyPostsPage = () => {
   const [posts, setPosts] = useState([]);
@@ -12,6 +12,9 @@ const MyPostsPage = () => {
   const { user } = useContext(UserContext);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     const fetchUserPosts = async () => {
       if (!user?.token) {
         setError('Debes iniciar sesión para ver tus publicaciones');
@@ -20,58 +23,59 @@ const MyPostsPage = () => {
       }
 
       try {
-        // Verificar que el ID de usuario existe antes de hacer la petición
         if (!user.id) {
           console.error('ID de usuario no disponible');
           setError('Información de usuario incompleta. Por favor, inicia sesión nuevamente.');
           setLoading(false);
           return;
         }
-        
+
         console.log('Obteniendo publicaciones del usuario con ID:', user.id);
-        
-        // URL específica para obtener publicaciones del usuario
-        const response = await axios.get(`/api/posts/user/${user.id}`, {
-          headers: {
-            'Authorization': `Bearer ${user.token}`
-          }
-        });
+
+        const response = await postService.getUserPosts({ signal });
 
         console.log('Datos recibidos de publicaciones:', response.data);
         setPosts(Array.isArray(response.data) ? response.data : []);
-        
-        // Si no hay publicaciones, intentar también con usuario_id = null para proponer reclamar
+
         if (response.data.length === 0) {
           console.log('Consultando publicaciones sin dueño para reclamar');
           try {
-            const orphanPosts = await axios.get('/api/posts');
-            const unclaimedPosts = orphanPosts.data.filter(post => !post.usuario_id);
-            
-            if (unclaimedPosts.length > 0) {
-              console.log(`Encontradas ${unclaimedPosts.length} publicaciones sin dueño`);
-              // No establecemos aquí, solo generamos un mensaje de ayuda
+            const allPostsResponse = await postService.getAllPosts({ signal });
+            if (Array.isArray(allPostsResponse.data)) {
+              const unclaimedPosts = allPostsResponse.data.filter(post => !post.usuario_id);
+              if (unclaimedPosts.length > 0) {
+                console.log(`Encontradas ${unclaimedPosts.length} publicaciones sin dueño`);
+              }
             }
           } catch (orphanError) {
-            console.warn('Error al buscar publicaciones sin dueño:', orphanError);
-            // No mostramos este error al usuario
+            if (orphanError.name !== 'AbortError') {
+              console.warn('Error al buscar publicaciones sin dueño:', orphanError);
+            }
           }
         }
-        
+
         setError(null);
       } catch (err) {
-        console.error('Error al obtener publicaciones:', err);
-        
-        if (err.response?.status === 401) {
-          setError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+        if (err.name === 'AbortError') {
+          console.log('Fetch user posts aborted');
         } else {
-          setError('Error al cargar tus publicaciones. Intenta de nuevo más tarde.');
+          console.error('Error al obtener publicaciones:', err);
+
+          if (err.response?.status === 401) {
+            setError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+          } else {
+            setError('Error al cargar tus publicaciones. Intenta de nuevo más tarde.');
+          }
         }
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchUserPosts();
+    return () => controller.abort();
   }, [user]);
 
   if (loading) {

@@ -110,7 +110,17 @@ export const favoriteService = {
   },
   // Verificar si un post es favorito
   checkFavorite: (postId) => {
-    const url = API_ROUTES.FAVORITES.CHECK(postId);
+    // --- Añadir Verificación ---
+    const checkUrlFunction = API_ROUTES.FAVORITES.CHECK;
+    if (typeof checkUrlFunction !== 'function') {
+      const errorMsg = "Error de configuración interna: API_ROUTES.FAVORITES.CHECK no es una función.";
+      console.error(errorMsg, API_ROUTES.FAVORITES);
+      // Devolver una promesa rechazada para que el .catch() en PostCard funcione
+      return Promise.reject(new Error(errorMsg));
+    }
+    // --- Fin Verificación ---
+
+    const url = checkUrlFunction(postId); // Llamar a la función para obtener la URL
     console.log('apiClient: Llamando a checkFavorite (GET)', url);
     return apiClient.get(url);
   }
