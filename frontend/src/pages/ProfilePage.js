@@ -111,18 +111,6 @@ const ProfilePage = () => {
     }
   };
 
-  // Función para manejar URLs de imagen inválidas
-  const handleImageError = (e) => {
-    console.log(`ProfilePage: handleImageError triggered for src: ${e.target.src}`); // Log de error
-    // Solo aplicar fallback si la URL fallida NO es ya la imagen default
-    if (fotoPerfil !== defaultProfileImage) {
-       console.log('ProfilePage: Aplicando imagen de fallback.');
-       setFotoPerfil(defaultProfileImage); // Actualizar estado en lugar de e.target.src
-    } else {
-       console.log('ProfilePage: La imagen de fallback ya está aplicada o la URL fallida es la de fallback.');
-    }
-  };
-
   // Manejar la subida de la imagen de perfil
   const handleImageUploaded = (imageUrl) => {
     console.log(`ProfilePage: handleImageUploaded recibiendo URL: ${imageUrl}`);
@@ -162,7 +150,7 @@ const ProfilePage = () => {
             width={150} 
             height={150} 
             className="mb-3"
-            onError={handleImageError}
+            alt="Foto de perfil"
           />
           {isEditing && (
             <ImageUploader 
