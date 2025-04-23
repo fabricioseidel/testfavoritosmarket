@@ -1,13 +1,41 @@
-import React from 'react';
-import { Container, Table, Button, Form, Row, Col } from 'react-bootstrap';
+import React, { useState } from 'react'; // Import useState
+import { Container, Table, Button, Form, Row, Col, Alert } from 'react-bootstrap'; // Import Alert
 import { useCart } from '../context/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
 
 const CartPage = () => {
   const { cart, removeFromCart, updateQuantity, clearCart, total } = useCart();
   const navigate = useNavigate();
+  const [paymentApproved, setPaymentApproved] = useState(false); // State for payment status
 
-  // Si el carrito está vacío
+  // Handler for the payment button
+  const handleProceedToPayment = () => {
+    console.log('Simulating payment approval...');
+    clearCart(); // Clear the cart via context
+    setPaymentApproved(true); // Set payment status to approved
+  };
+
+  // If payment is approved, show success message
+  if (paymentApproved) {
+    return (
+      <Container className="my-5 text-center">
+        <Alert variant="success" className="p-5 shadow-sm">
+          <span role="img" aria-label="check mark" style={{ fontSize: '3rem' }}>✅</span>
+          <h1 className="mt-3">PAGO APROBADO</h1>
+          <p className="lead mt-3">Tu compra ha sido procesada exitosamente.</p>
+          <Button
+            variant="primary"
+            className="mt-4"
+            onClick={() => navigate('/')}
+          >
+            Regresar al inicio
+          </Button>
+        </Alert>
+      </Container>
+    );
+  }
+
+  // Si el carrito está vacío (y payment not approved)
   if (cart.length === 0) {
     return (
       <Container className="my-5 py-3">
@@ -27,10 +55,11 @@ const CartPage = () => {
     );
   }
 
+  // Render cart view if not empty and payment not approved
   return (
     <Container className="my-5">
       <h1 className="mb-4">Tu Carrito</h1>
-      
+
       <Table responsive hover>
         <thead className="bg-light">
           <tr>
@@ -46,9 +75,9 @@ const CartPage = () => {
             <tr key={item.id} className="align-middle">
               <td>
                 <div className="d-flex align-items-center">
-                  <img 
-                    src={item.image} 
-                    alt={item.title} 
+                  <img
+                    src={item.image}
+                    alt={item.title}
                     style={{ width: '50px', height: '50px', objectFit: 'cover' }}
                     className="me-3"
                   />
@@ -57,7 +86,7 @@ const CartPage = () => {
                   </Link>
                 </div>
               </td>
-              <td>${item.price.toFixed(2)}</td>
+              <td>${item.price.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
               <td style={{ width: '150px' }}>
                 <Form.Control
                   type="number"
@@ -67,10 +96,10 @@ const CartPage = () => {
                   className="form-control-sm"
                 />
               </td>
-              <td>${(item.price * item.quantity).toFixed(2)}</td>
+              <td>${(item.price * item.quantity).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
               <td>
-                <Button 
-                  variant="danger" 
+                <Button
+                  variant="danger"
                   size="sm"
                   onClick={() => removeFromCart(item.id)}
                 >
@@ -81,12 +110,12 @@ const CartPage = () => {
           ))}
         </tbody>
       </Table>
-      
+
       <Row className="mt-4">
         <Col md={6}>
-          <Button 
-            variant="outline-danger" 
-            onClick={clearCart}
+          <Button
+            variant="outline-danger"
+            onClick={clearCart} // Keep original clear cart button functionality
           >
             Vaciar carrito
           </Button>
@@ -95,7 +124,7 @@ const CartPage = () => {
           <div className="bg-light p-4 rounded">
             <div className="d-flex justify-content-between mb-2">
               <span>Subtotal:</span>
-              <strong>${total.toFixed(2)}</strong>
+              <strong>${total.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
             </div>
             <div className="d-flex justify-content-between mb-3">
               <span>Envío:</span>
@@ -104,12 +133,12 @@ const CartPage = () => {
             <hr />
             <div className="d-flex justify-content-between mb-4">
               <h5>Total:</h5>
-              <h5>${total.toFixed(2)}</h5>
+              <h5>${total.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</h5>
             </div>
-            <Button 
-              variant="success" 
+            <Button
+              variant="success"
               className="w-100"
-              onClick={() => navigate('/checkout')}
+              onClick={handleProceedToPayment} // Use the new handler
             >
               Proceder al pago
             </Button>
