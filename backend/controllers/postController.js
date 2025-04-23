@@ -165,23 +165,30 @@ exports.deletePost = async (req, res) => {
 // Buscar publicaciones
 exports.searchPosts = async (req, res) => {
   try {
-    const { q } = req.query;
+    const { q, categoria_id } = req.query; // Añadir categoria_id
 
-    if (!q) {
-      return res.status(400).json({ error: 'El término de búsqueda es obligatorio' });
+    console.log('🔍 Buscando publicaciones con:', { q, categoria_id });
+
+    let queryText = `
+      SELECT p.*, c.nombre as categoria_nombre
+      FROM publicaciones p
+      LEFT JOIN categorias c ON p.categoria_id = c.id
+      WHERE 1=1`; // Empezar con una condición siempre verdadera
+    const queryParams = [];
+
+    if (q) {
+      queryParams.push(`%${q}%`);
+      queryText += ` AND (p.titulo ILIKE $${queryParams.length} OR p.descripcion ILIKE $${queryParams.length})`;
     }
 
-    console.log('🔍 Buscando publicaciones con:', q);
+    if (categoria_id) {
+      queryParams.push(categoria_id);
+      queryText += ` AND p.categoria_id = $${queryParams.length}`;
+    }
 
-    const searchTerm = `%${q}%`;
-    const result = await pool.query(
-      `SELECT p.*, c.nombre as categoria_nombre
-       FROM publicaciones p
-       LEFT JOIN categorias c ON p.categoria_id = c.id
-       WHERE p.titulo ILIKE $1 OR p.descripcion ILIKE $1
-       ORDER BY p.fecha_creacion DESC`,
-      [searchTerm]
-    );
+    queryText += ` ORDER BY p.fecha_creacion DESC`;
+
+    const result = await pool.query(queryText, queryParams);
 
     console.log(`✅ Encontradas ${result.rows.length} publicaciones`);
     res.json(result.rows);

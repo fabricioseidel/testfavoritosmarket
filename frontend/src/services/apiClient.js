@@ -51,7 +51,12 @@ export const postService = {
   updatePost: (id, postData) => apiClient.put(API_ROUTES.UPDATE_POST(id), postData),
   deletePost: (id) => apiClient.delete(API_ROUTES.DELETE_POST(id)),
   getUserPosts: (config) => apiClient.get(API_ROUTES.GET_USER_POSTS, config),
-  searchPosts: (query, config) => apiClient.get(API_ROUTES.SEARCH_POSTS, { params: { q: query }, ...config }),
+  searchPosts: (query, categoryId, config) => {
+    const params = {};
+    if (query) params.q = query;
+    if (categoryId) params.categoria_id = categoryId; // Añadir categoria_id a los parámetros
+    return apiClient.get(API_ROUTES.SEARCH_POSTS, { params, ...config });
+  },
   claimPost: (postId) => apiClient.put(API_ROUTES.CLAIM_POST(postId)),
 };
 
