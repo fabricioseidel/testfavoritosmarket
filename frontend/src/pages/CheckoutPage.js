@@ -26,24 +26,32 @@ const CheckoutPage = () => {
   const [orderComplete, setOrderComplete] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Effect to handle redirection if cart becomes empty and update email from user context
+  // Effect to update email from user context
   useEffect(() => {
-    // Log current state for debugging
-    console.log("CheckoutPage Effect: Cart length:", cart.length, "Order complete:", orderComplete, "User:", user);
-
-    // Only redirect if the cart is empty AND the order hasn't just been completed
-    if (cart.length === 0 && !orderComplete) {
-      console.log("CheckoutPage Effect: Cart is empty and order not complete, navigating to /cart.");
-      navigate('/cart');
-    }
-
     // Update email in form if user context changes (e.g., after login) and differs
     if (user?.email && formData.email !== user.email) {
         console.log("CheckoutPage Effect: Updating email from user context.");
         setFormData(prev => ({ ...prev, email: user.email }));
     }
-    // Add all relevant dependencies for this effect
-  }, [cart, orderComplete, navigate, user, formData.email]);
+    // Add relevant dependencies for email update
+  }, [user, formData.email]); // Separate effect for email
+
+  // Effect to redirect if cart is empty ON INITIAL LOAD or if it becomes empty unexpectedly
+  useEffect(() => {
+    // Log current state for debugging
+    console.log("CheckoutPage Cart Effect: Cart length:", cart.length, "Order complete:", orderComplete);
+
+    // Redirect if cart is empty AND the order hasn't just been completed.
+    // This prevents redirecting away immediately after clearing the cart on success.
+    if (cart.length === 0 && !orderComplete) {
+      console.log("CheckoutPage Cart Effect: Cart is empty and order not complete, navigating to /cart.");
+      // Prevent navigation if processing just finished to allow success message display
+      if (!isProcessing) { // Check if not currently processing (or just finished)
+          navigate('/cart');
+      }
+    }
+    // This effect depends on cart length, order completion status, and processing state
+  }, [cart, orderComplete, navigate, isProcessing]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
