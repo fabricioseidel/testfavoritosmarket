@@ -95,13 +95,6 @@ const CheckoutPage = () => {
     );
   }
 
-  // If cart is empty and order is not complete, render nothing while redirecting.
-  // This prevents rendering the form briefly before the useEffect redirect happens.
-  if (cart.length === 0 && !orderComplete) {
-      console.log("CheckoutPage Render: Cart empty and order not complete, returning null while redirecting.");
-      return null; // Render nothing, useEffect will handle the navigation
-  }
-
   // Render the checkout form
   return (
     <Container className="my-5">
