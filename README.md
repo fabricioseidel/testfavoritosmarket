@@ -1,4 +1,20 @@
-# FavoritosMarket
+#LINK DE DEPLOY BACKEND RENDER
+https://api.render.com/deploy/srv-d01cn1vgi27c73e9drhg?key=k8m73AHwi90
+
+#LINK DE DEPLOY DB RENDER
+EXTERNAL DB URL
+postgresql://postgres_db_market_user:oSwFT3WKrCv6VpUojqCkX3Y945fhEMXj@dpg-d01cj7s9c44c73fh5e2g-a.virginia-postgres.render.com/postgres_db_market
+
+#PSQL COMMAND 
+render psql dpg-d01cj7s9c44c73fh5e2g-a
+
+INTERNAL DB URL 
+postgresql://postgres_db_market_user:oSwFT3WKrCv6VpUojqCkX3Y945fhEMXj@dpg-d01cj7s9c44c73fh5e2g-a/postgres_db_market
+
+#LINK DE DEPLOY FRONTEND NETLIFY
+https://closet-marketplace.netlify.app/
+
+#CLOSET-MARKETPLACE
 
 Plataforma de marketplace donde los usuarios pueden publicar productos, marcarlos como favoritos y gestionar su perfil.
 
