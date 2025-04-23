@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react'; // Import useEffect
 import { Container, Row, Col, Form, Button, Card, Alert } from 'react-bootstrap';
 import { useCart } from '../context/CartContext';
 import { UserContext } from '../context/UserContext';
@@ -8,11 +8,11 @@ const CheckoutPage = () => {
   const { cart, total, clearCart } = useCart();
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    email: user?.email || '',
+    email: user?.email || '', // Pre-fill email if user is available
     address: '',
     city: '',
     zip: '',
@@ -21,16 +21,29 @@ const CheckoutPage = () => {
     expDate: '',
     cvv: ''
   });
-  
+
   const [validated, setValidated] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Si no hay productos en el carrito Y el pedido no está completo, redirigir
-  if (cart.length === 0 && !orderComplete) {
-    navigate('/cart');
-    return null;
-  }
+  // Effect to handle redirection if cart becomes empty and update email from user context
+  useEffect(() => {
+    // Log current state for debugging
+    console.log("CheckoutPage Effect: Cart length:", cart.length, "Order complete:", orderComplete, "User:", user);
+
+    // Only redirect if the cart is empty AND the order hasn't just been completed
+    if (cart.length === 0 && !orderComplete) {
+      console.log("CheckoutPage Effect: Cart is empty and order not complete, navigating to /cart.");
+      navigate('/cart');
+    }
+
+    // Update email in form if user context changes (e.g., after login) and differs
+    if (user?.email && formData.email !== user.email) {
+        console.log("CheckoutPage Effect: Updating email from user context.");
+        setFormData(prev => ({ ...prev, email: user.email }));
+    }
+    // Add all relevant dependencies for this effect
+  }, [cart, orderComplete, navigate, user, formData.email]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -43,24 +56,26 @@ const CheckoutPage = () => {
   const handleSubmit = (event) => {
     event.preventDefault();
     const form = event.currentTarget;
-    
+
     setValidated(true);
 
     if (form.checkValidity() === false) {
       event.stopPropagation();
       return;
     }
-    
+
     setIsProcessing(true);
 
+    // Simulate payment processing
     setTimeout(() => {
-      console.log('Simulando pago exitoso...');
-      setOrderComplete(true);
-      clearCart();
-      setIsProcessing(false);
-    }, 1500); 
+      console.log('Simulating payment success...');
+      setOrderComplete(true); // Mark order as complete
+      clearCart(); // Clear the cart via context
+      setIsProcessing(false); // Stop processing indicator
+    }, 1500);
   };
 
+  // Render success message if order is complete
   if (orderComplete) {
     return (
       <Container className="my-5 text-center">
@@ -68,8 +83,8 @@ const CheckoutPage = () => {
           <span role="img" aria-label="confetti" style={{ fontSize: '3rem' }}>🎉</span>
           <h1 className="mt-3">¡Pedido Completado!</h1>
           <p className="lead mt-3">Gracias por tu compra. Hemos simulado el envío de los detalles a tu correo electrónico.</p>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             className="mt-4"
             onClick={() => navigate('/')}
           >
@@ -80,13 +95,23 @@ const CheckoutPage = () => {
     );
   }
 
+  // If cart is empty and order is not complete, render nothing while redirecting.
+  // This prevents rendering the form briefly before the useEffect redirect happens.
+  if (cart.length === 0 && !orderComplete) {
+      console.log("CheckoutPage Render: Cart empty and order not complete, returning null while redirecting.");
+      return null; // Render nothing, useEffect will handle the navigation
+  }
+
+  // Render the checkout form
   return (
     <Container className="my-5">
       <h1 className="mb-4">Checkout</h1>
-      
+
       <Row>
         <Col md={8}>
+          {/* Form starts here */}
           <Form noValidate validated={validated} onSubmit={handleSubmit}>
+            {/* Shipping Information */}
             <h4 className="mb-3">Información de Envío</h4>
             <Row className="mb-3">
               <Col md={6}>
@@ -184,6 +209,7 @@ const CheckoutPage = () => {
 
             <hr className="my-4" />
 
+            {/* Payment Information */}
             <h4 className="mb-3">Información de Pago (Simulado)</h4>
             <Form.Group className="mb-3" controlId="cardName">
               <Form.Label>Nombre en la tarjeta</Form.Label>
@@ -247,18 +273,20 @@ const CheckoutPage = () => {
               </Col>
             </Row>
 
-            <Button 
-              variant="primary" 
-              type="submit" 
-              className="w-100 mt-4" 
+            <Button
+              variant="primary"
+              type="submit"
+              className="w-100 mt-4"
               size="lg"
-              disabled={isProcessing}
+              disabled={isProcessing} // Disable button while processing
             >
-              {isProcessing ? 'Procesando...' : 'Completar Compra'} 
+              {isProcessing ? 'Procesando...' : 'Completar Compra'}
             </Button>
           </Form>
+          {/* Form ends here */}
         </Col>
-        
+
+        {/* Order Summary */}
         <Col md={4}>
           <Card className="mb-4 shadow-sm">
             <Card.Header className="bg-primary text-white">
@@ -268,7 +296,7 @@ const CheckoutPage = () => {
               {cart.map(item => (
                 <div key={item.id} className="d-flex justify-content-between mb-2">
                   <span>{item.title.substring(0, 20)}{item.title.length > 20 ? '...' : ''} x {item.quantity}</span>
-                  <span>${(item.price * item.quantity).toFixed(2)}</span>
+                  <span>${(item.price * item.quantity).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                 </div>
               ))}
               <hr />
