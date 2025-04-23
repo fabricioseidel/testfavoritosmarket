@@ -24,8 +24,9 @@ const CheckoutPage = () => {
   
   const [validated, setValidated] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Si no hay productos en el carrito, redirigir a la página del carrito
+  // Si no hay productos en el carrito Y el pedido no está completo, redirigir
   if (cart.length === 0 && !orderComplete) {
     navigate('/cart');
     return null;
@@ -43,26 +44,30 @@ const CheckoutPage = () => {
     event.preventDefault();
     const form = event.currentTarget;
     
+    setValidated(true);
+
     if (form.checkValidity() === false) {
       event.stopPropagation();
-      setValidated(true);
       return;
     }
     
-    // Aquí iría la lógica real para procesar el pago
-    // Por ahora, simularemos un pago exitoso
+    setIsProcessing(true);
+
     setTimeout(() => {
+      console.log('Simulando pago exitoso...');
       setOrderComplete(true);
       clearCart();
-    }, 1500);
+      setIsProcessing(false);
+    }, 1500); 
   };
 
   if (orderComplete) {
     return (
       <Container className="my-5 text-center">
-        <Alert variant="success" className="p-5">
-          <h1>¡Pedido Completado!</h1>
-          <p className="lead mt-3">Gracias por tu compra. Hemos enviado los detalles a tu correo electrónico.</p>
+        <Alert variant="success" className="p-5 shadow-sm">
+          <span role="img" aria-label="confetti" style={{ fontSize: '3rem' }}>🎉</span>
+          <h1 className="mt-3">¡Pedido Completado!</h1>
+          <p className="lead mt-3">Gracias por tu compra. Hemos simulado el envío de los detalles a tu correo electrónico.</p>
           <Button 
             variant="primary" 
             className="mt-4"
@@ -179,7 +184,7 @@ const CheckoutPage = () => {
 
             <hr className="my-4" />
 
-            <h4 className="mb-3">Información de Pago</h4>
+            <h4 className="mb-3">Información de Pago (Simulado)</h4>
             <Form.Group className="mb-3" controlId="cardName">
               <Form.Label>Nombre en la tarjeta</Form.Label>
               <Form.Control
@@ -242,14 +247,20 @@ const CheckoutPage = () => {
               </Col>
             </Row>
 
-            <Button variant="primary" type="submit" className="w-100 mt-4" size="lg">
-              Completar Compra
+            <Button 
+              variant="primary" 
+              type="submit" 
+              className="w-100 mt-4" 
+              size="lg"
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Procesando...' : 'Completar Compra'} 
             </Button>
           </Form>
         </Col>
         
         <Col md={4}>
-          <Card className="mb-4">
+          <Card className="mb-4 shadow-sm">
             <Card.Header className="bg-primary text-white">
               <h5 className="mb-0">Resumen de la Compra</h5>
             </Card.Header>
@@ -263,7 +274,7 @@ const CheckoutPage = () => {
               <hr />
               <div className="d-flex justify-content-between">
                 <strong>Total</strong>
-                <strong>${total.toFixed(2)}</strong>
+                <strong>${total.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
               </div>
             </Card.Body>
           </Card>
