@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Container, Row, Col, Card, Button, Alert, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
-import axios from 'axios';
+import { postService } from '../services/apiClient'; // Import postService
 
 const ClaimPostsPage = () => {
   const [posts, setPosts] = useState([]);
@@ -12,18 +12,24 @@ const ClaimPostsPage = () => {
   const { user } = useContext(UserContext);
 
   const fetchUnclaimedPosts = async () => {
+    setLoading(true); // Set loading true at the start
     try {
-      // Obtener todas las publicaciones
-      const response = await axios.get('/api/posts');
-      
-      // Filtrar solo las que no tienen usuario asignado
-      const unclaimedPosts = response.data.filter(post => !post.usuario_id);
-      
+      // OPTION 1: Ideal - Use a dedicated endpoint (if it exists or can be created)
+      // const response = await postService.getUnclaimedPosts();
+      // setPosts(response.data || []);
+
+      // OPTION 2: Current (less efficient) - Fetch all and filter client-side
+      console.warn("Fetching all posts to find unclaimed ones. Consider a dedicated backend endpoint.");
+      const response = await postService.getAllPosts();
+      const unclaimedPosts = Array.isArray(response.data)
+                             ? response.data.filter(post => !post.usuario_id)
+                             : [];
       setPosts(unclaimedPosts);
+
       setError(null);
     } catch (err) {
       console.error('Error al obtener publicaciones sin reclamar:', err);
-      setError('Error al cargar publicaciones. Por favor, intente nuevamente.');
+      setError(err.response?.data?.error || err.message || 'Error al cargar publicaciones.');
     } finally {
       setLoading(false);
     }
@@ -36,25 +42,25 @@ const ClaimPostsPage = () => {
       setError('Debes iniciar sesión para ver esta página');
       setLoading(false);
     }
-  }, [user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // Depend only on user
 
   const handleClaimPost = async (postId) => {
     try {
       setError(null);
       setSuccessMessage(null);
-      
-      const claimResponse = await axios.put(`/api/posts/claim/${postId}`, {}, {
-        headers: {
-          'Authorization': `Bearer ${user.token}`
-        }
-      });
-      
+
+      // Use postService to claim the post
+      const claimResponse = await postService.claimPost(postId);
+
       console.log('Respuesta al reclamar:', claimResponse.data.message);
-      
+
       setSuccessMessage(`¡Publicación reclamada exitosamente!`);
-      
-      // Actualizar la lista de publicaciones
-      fetchUnclaimedPosts();
+
+      // Refresh the list efficiently by removing the claimed post locally
+      setPosts(currentPosts => currentPosts.filter(post => post.id !== postId));
+      // Or refetch if local update is complex: fetchUnclaimedPosts();
+
     } catch (err) {
       console.error('Error al reclamar publicación:', err);
       setError(err.response?.data?.error || 'Error al reclamar la publicación');

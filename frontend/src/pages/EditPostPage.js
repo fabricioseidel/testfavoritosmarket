@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+// Removed axios import
 import { UserContext } from '../context/UserContext';
 import { Container, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import CategorySelector from '../components/CategorySelector';
 import ImageUploader from '../components/ImageUploader'; // Importamos el componente
+import { postService } from '../services/apiClient'; // Import postService
 
 const EditPostPage = () => {
   const { id } = useParams();
@@ -29,51 +30,33 @@ const EditPostPage = () => {
       }
 
       try {
-        let userId = user.id;
-        
-        if (!userId) {
-          const storedUser = JSON.parse(localStorage.getItem('user'));
-          userId = storedUser?.id;
-          console.log('ID recuperado desde localStorage:', userId);
-        }
-        
-        const response = await axios.get(`/api/posts/${id}`, {
-          headers: {
-            Authorization: `Bearer ${user.token}`
-          }
-        });
-
+        // Use postService to get post data
+        const response = await postService.getPostById(id);
         const post = response.data;
-        
+
         if (!post) {
           setError('No se encontró la publicación');
           setLoading(false);
           return;
         }
-        
+
+        let userId = user.id;
+
         console.log('Datos del post recibidos:', post);
         console.log('Usuario actual ID:', userId);
         console.log('ID del usuario del post:', post.usuario_id);
-        
-        if (userId === undefined) {
-          console.log('ID de usuario no disponible en el frontend, continuando...');
-          setTitle(post.titulo || '');
-          setDescription(post.descripcion || '');
-          setCategoryId(post.categoria_id || '');
-          setPrice(post.precio ? post.precio.toString() : '');
-          setImage(post.imagen || '');
-          setError('');
-          setLoading(false);
-          return;
-        }
-        
-        const postUserId = parseInt(post.usuario_id);
-        const currentUserId = parseInt(userId);
-        
-        if (postUserId !== currentUserId) {
-          setError('No tienes permiso para editar esta publicación');
-          setLoading(false);
-          return;
+
+        const postUserId = parseInt(post.usuario_id, 10);
+        const currentUserId = parseInt(userId, 10);
+
+        if (isNaN(currentUserId) || postUserId !== currentUserId) {
+          if (userId === undefined) {
+            console.warn('ID de usuario no disponible en el frontend, permitiendo edición pero podría ser inseguro.');
+          } else {
+            setError('No tienes permiso para editar esta publicación');
+            setLoading(false);
+            return;
+          }
         }
 
         setTitle(post.titulo || '');
@@ -81,12 +64,12 @@ const EditPostPage = () => {
         setCategoryId(post.categoria_id || '');
         setPrice(post.precio ? post.precio.toString() : '');
         setImage(post.imagen || '');
-        
+
         setError('');
-        setLoading(false);
       } catch (err) {
         console.error('Error al cargar la publicación:', err);
-        setError('No se pudo cargar la información de la publicación');
+        setError(err.response?.data?.error || err.message || 'No se pudo cargar la información de la publicación');
+      } finally {
         setLoading(false);
       }
     };
@@ -107,43 +90,29 @@ const EditPostPage = () => {
       return;
     }
 
-    if (parseFloat(price) <= 0) {
-      setError('El precio debe ser un número positivo.');
-      return;
-    }
-
     const dataToSend = {
       titulo: title,
       descripcion: description,
-      categoria_id: categoryId,
+      categoria_id: parseInt(categoryId, 10),
       precio: parseFloat(price),
       imagen: image,
     };
 
+    if (isNaN(dataToSend.categoria_id)) {
+      setError('Por favor selecciona una categoría válida.');
+      return;
+    }
+    if (isNaN(dataToSend.precio) || dataToSend.precio <= 0) {
+      setError('El precio debe ser un número positivo.');
+      return;
+    }
+
     try {
-      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      
-      console.log(`Enviando solicitud a: ${baseUrl}/posts/update/${id}`);
-      
-      const response = await fetch(`${baseUrl}/posts/update/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(dataToSend)
-      });
-      
-      console.log(`Respuesta recibida con código: ${response.status}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log("Respuesta del servidor:", data);
-      
+      console.log(`Actualizando post con ID: ${id}`);
+      const response = await postService.updatePost(id, dataToSend);
+
+      console.log("Respuesta del servidor:", response.data);
+
       setSuccess(true);
       setError(null);
 
@@ -152,12 +121,11 @@ const EditPostPage = () => {
       }, 2000);
     } catch (err) {
       console.error('Error editando la publicación:', err);
-      setError(`Ocurrió un error al editar la publicación: ${err.message}`);
+      setError(err.response?.data?.error || err.message || 'Ocurrió un error al editar la publicación');
       setSuccess(false);
     }
   };
 
-  // Manejador para la imagen subida
   const handleImageUploaded = (imageUrl) => {
     setImage(imageUrl);
   };
@@ -200,9 +168,10 @@ const EditPostPage = () => {
             />
           </Form.Group>
 
-          <CategorySelector 
+          <CategorySelector
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
+            required
           />
 
           <Form.Group controlId="formPrice" className="mb-3">
@@ -217,7 +186,6 @@ const EditPostPage = () => {
             />
           </Form.Group>
 
-          {/* Reemplazamos el campo de imagen con ImageUploader */}
           <ImageUploader 
             onImageUploaded={handleImageUploaded}
             initialImage={image}

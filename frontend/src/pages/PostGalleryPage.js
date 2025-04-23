@@ -86,6 +86,7 @@ const PostsGalleryPage = () => {
                 description={post.descripcion}
                 price={parseFloat(post.precio)}
                 image={post.imagen}
+                onFavorite={handleFavorite}
               />
             </Col>
           ))}

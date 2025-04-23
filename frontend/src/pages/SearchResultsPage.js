@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Alert, Button, Form, ButtonGroup, Spinner } from 'react-bootstrap';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import PostCard from '../components/PostCard';
 import CategorySelector from '../components/CategorySelector'; // Importar CategorySelector
 import { postService } from '../services/apiClient'; // Importar postService
@@ -24,7 +24,6 @@ const ResultCount = styled.p`
 
 const SearchResultsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

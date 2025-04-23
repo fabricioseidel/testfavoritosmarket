@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Container, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import PostCard from '../components/PostCard';
 import { UserContext } from '../context/UserContext';
-import { useCart } from '../context/CartContext';
 import { postService } from '../services/apiClient'; // Importar postService
 
 const HomePage = () => {
@@ -10,7 +9,6 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user } = useContext(UserContext);
-  const { cart } = useCart();
 
   useEffect(() => {
     const controller = new AbortController();
